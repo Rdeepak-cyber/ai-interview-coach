@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import type { ResumeProfile } from "../lib/resume-profile";
 
 type ParseResponse = {
   text: string;
@@ -16,10 +17,15 @@ export default function Home() {
   const [extracted, setExtracted] = useState<ParseResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  const [profile, setProfile] = useState<ResumeProfile | null>(null);
+  const [understandingError, setUnderstandingError] = useState<string | null>(null);
+  const [isUnderstanding, setIsUnderstanding] = useState(false);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
     setExtracted(null);
+    setProfile(null);
+    setUnderstandingError(null);
 
     if (!nextFile) {
       setFile(null);
@@ -76,7 +82,32 @@ export default function Home() {
     setFile(null);
     setExtracted(null);
     setError(null);
+    setProfile(null);
+    setUnderstandingError(null);
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  async function understandResume() {
+    if (!extracted) return;
+
+    setIsUnderstanding(true);
+    setUnderstandingError(null);
+    setProfile(null);
+
+    try {
+      const response = await fetch("/api/resume/understand", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resumeText: extracted.text })
+      });
+      const data = (await response.json()) as { profile?: ResumeProfile; error?: string };
+      if (!response.ok || !data.profile) throw new Error(data.error || "We could not understand that resume.");
+      setProfile(data.profile);
+    } catch (caughtError) {
+      setUnderstandingError(caughtError instanceof Error ? caughtError.message : "We could not understand that resume.");
+    } finally {
+      setIsUnderstanding(false);
+    }
   }
 
   return (
@@ -130,7 +161,46 @@ export default function Home() {
           </div>
           <p className="source-name">Source: {extracted.fileName}</p>
           <pre>{extracted.text}</pre>
-          <p className="confirmation-note">Confirm this looks accurate before we use it to understand your experience in Phase 2.</p>
+          <div className="understanding-action">
+            <div>
+              <p className="eyebrow">02 RESUME UNDERSTANDING</p>
+              <p className="confirmation-note">If the extracted text looks right, let Claude turn it into a structured experience profile.</p>
+            </div>
+            <button type="button" onClick={understandResume} disabled={isUnderstanding}>
+              {isUnderstanding ? "Understanding resume…" : "Understand my resume"}
+            </button>
+          </div>
+          {understandingError && <p className="message error" role="alert">{understandingError}</p>}
+        </section>
+      )}
+
+      {profile && (
+        <section className="profile" aria-labelledby="profile-title">
+          <p className="eyebrow">STRUCTURED PROFILE</p>
+          <h2 id="profile-title">Your experience, organized</h2>
+          <div className="profile-grid">
+            <article>
+              <h3>Skills</h3>
+              <div className="chips">{profile.skills.length ? profile.skills.map((skill) => <span key={skill}>{skill}</span>) : <p>None listed</p>}</div>
+            </article>
+            <article>
+              <h3>Experience</h3>
+              <p className="big-number">{profile.yearsExperience}<small> years</small></p>
+              <p className="muted-copy">Based only on dates stated in your resume.</p>
+            </article>
+          </div>
+          <div className="profile-list">
+            <h3>Work history</h3>
+            {profile.workHistory.length ? profile.workHistory.map((role) => <article className="role" key={`${role.company}-${role.title}`}><h4>{role.title} · {role.company}</h4><p>{role.duration}</p>{role.highlights.length > 0 && <ul>{role.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul>}</article>) : <p className="muted-copy">No work history identified.</p>}
+          </div>
+          <div className="profile-list">
+            <h3>Projects</h3>
+            {profile.projects.length ? profile.projects.map((project) => <article className="role" key={project.name}><h4>{project.name}</h4><p>{project.description}</p>{project.technologies.length > 0 && <p className="muted-copy">{project.technologies.join(" · ")}</p>}</article>) : <p className="muted-copy">No projects identified.</p>}
+          </div>
+          <div className="profile-list gaps">
+            <h3>Notable gaps</h3>
+            {profile.notableGaps.length ? <ul>{profile.notableGaps.map((gap) => <li key={gap}>{gap}</li>)}</ul> : <p className="muted-copy">No clearly supported gaps identified.</p>}
+          </div>
         </section>
       )}
     </main>

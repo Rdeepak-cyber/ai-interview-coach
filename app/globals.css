@@ -35,4 +35,26 @@ button.secondary { background: transparent; color: var(--deep); }
 .source-name { border-bottom: 1px solid var(--line); margin: 23px 0 0; padding-bottom: 15px; }
 pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-family: "Courier New", monospace; font-size: .86rem; line-height: 1.65; margin: 0; max-height: 430px; overflow: auto; padding: 22px; white-space: pre-wrap; word-break: break-word; }
 .confirmation-note { margin: 17px 0 0; }
+.understanding-action { align-items: flex-end; border-top: 1px solid var(--line); display: flex; gap: 22px; justify-content: space-between; margin-top: 24px; padding-top: 22px; }
+.understanding-action .eyebrow { margin-bottom: 6px; }
+.understanding-action .confirmation-note { margin: 0; max-width: 545px; }
+.profile { background: #153b42; border-radius: 4px; color: #eaf1ec; margin-top: 28px; padding: clamp(25px, 5vw, 46px); }
+.profile .eyebrow { color: #a9cdbd; }
+.profile h2 { color: white; }
+.profile h3 { color: #b9dacb; font-size: .72rem; letter-spacing: .12em; margin: 0 0 14px; text-transform: uppercase; }
+.profile h4 { color: white; font-family: Georgia, "Times New Roman", serif; font-size: 1.1rem; margin: 0 0 5px; }
+.profile-grid { display: grid; gap: 18px; grid-template-columns: 2fr 1fr; margin: 30px 0; }
+.profile-grid article, .profile-list { border: 1px solid rgba(220, 238, 228, .2); padding: 20px; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chips span { background: rgba(229, 245, 236, .14); border: 1px solid rgba(229, 245, 236, .18); color: #e9f4ed; font-size: .82rem; padding: 6px 8px; }
+.big-number { color: white; font-family: Georgia, "Times New Roman", serif; font-size: 2.6rem; line-height: .8; margin: 4px 0 9px; }
+.big-number small { font-family: Arial, Helvetica, sans-serif; font-size: .8rem; }
+.muted-copy, .role p, .profile li { color: #c3d5cb; font-size: .9rem; line-height: 1.5; }
+.profile-list { margin-top: 18px; }
+.role { border-top: 1px solid rgba(220, 238, 228, .14); padding: 15px 0; }
+.role:last-child { padding-bottom: 0; }
+.role p { margin: 3px 0 0; }
+.role ul, .gaps ul { margin: 10px 0 0; padding-left: 18px; }
+.gaps { background: rgba(255, 255, 255, .03); }
+@media (max-width: 600px) { .understanding-action { align-items: stretch; flex-direction: column; } .profile-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { main { width: min(100% - 28px, 920px); padding-top: 45px; } .actions { align-items: stretch; flex-direction: column-reverse; } button { width: 100%; } }
