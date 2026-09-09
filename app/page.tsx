@@ -1,7 +1,9 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import InterviewSession from "../components/InterviewSession";
 import type { InterviewQuestion } from "../lib/interview-question";
+import type { InterviewQA } from "../lib/interview-session";
 import type { ResumeProfile } from "../lib/resume-profile";
 
 type ParseResponse = {
@@ -25,6 +27,8 @@ export default function Home() {
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null);
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [isInterviewStarted, setIsInterviewStarted] = useState(false);
+  const [qaPairs, setQaPairs] = useState<InterviewQA[] | null>(null);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
@@ -33,6 +37,8 @@ export default function Home() {
     setUnderstandingError(null);
     setQuestions(null);
     setQuestionError(null);
+    setIsInterviewStarted(false);
+    setQaPairs(null);
 
     if (!nextFile) {
       setFile(null);
@@ -93,6 +99,8 @@ export default function Home() {
     setUnderstandingError(null);
     setQuestions(null);
     setQuestionError(null);
+    setIsInterviewStarted(false);
+    setQaPairs(null);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -104,6 +112,8 @@ export default function Home() {
     setProfile(null);
     setQuestions(null);
     setQuestionError(null);
+    setIsInterviewStarted(false);
+    setQaPairs(null);
 
     try {
       const response = await fetch("/api/resume/understand", {
@@ -128,6 +138,8 @@ export default function Home() {
     setIsGeneratingQuestions(true);
     setQuestionError(null);
     setQuestions(null);
+    setIsInterviewStarted(false);
+    setQaPairs(null);
     try {
       const response = await fetch("/api/questions/generate", {
         method: "POST",
@@ -251,14 +263,57 @@ export default function Home() {
           {questionError && <p className="message error" role="alert">{questionError}</p>}
         </section>
         {questions && (
-          <section className="question-list" aria-labelledby="question-list-title">
-            <p className="eyebrow">PRACTICE SET READY</p>
-            <h2 id="question-list-title">Your interview questions</h2>
-            <ol>
-              {questions.map((item, index) => <li key={`${index}-${item.question}`}><div><span className="question-index">{String(index + 1).padStart(2, "0")}</span><p>{item.question}</p></div><div className="question-meta"><span>{item.type.replace("-", " ")}</span><span className={`difficulty ${item.difficulty}`}>{item.difficulty}</span></div></li>)}
-            </ol>
-            <p className="confirmation-note">Review the set. Phase 4 will present these questions one at a time for your answers.</p>
-          </section>
+          <>
+            <section className="question-list" aria-labelledby="question-list-title">
+              <div className="result-heading">
+                <div>
+                  <p className="eyebrow">PRACTICE SET READY</p>
+                  <h2 id="question-list-title">Your interview questions</h2>
+                </div>
+                <span className="format-tag">{questions.length} QUESTIONS</span>
+              </div>
+              <ol>
+                {questions.map((item, index) => (
+                  <li key={`${index}-${item.question}`}>
+                    <div>
+                      <span className="question-index">{String(index + 1).padStart(2, "0")}</span>
+                      <p>{item.question}</p>
+                    </div>
+                    <div className="question-meta">
+                      <span>{item.type.replace("-", " ")}</span>
+                      <span className={`difficulty ${item.difficulty}`}>{item.difficulty}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              {!isInterviewStarted ? (
+                <div className="understanding-action">
+                  <div>
+                    <p className="eyebrow">04 TEXT-BASED INTERVIEW SESSION</p>
+                    <p className="confirmation-note">
+                      Practice answering these questions one at a time. Your responses will be saved in session state for your feedback report.
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setIsInterviewStarted(true)}>
+                    Start text interview
+                  </button>
+                </div>
+              ) : (
+                <p className="confirmation-note">
+                  Interview session in progress below. Answer each question one by one.
+                </p>
+              )}
+            </section>
+
+            {isInterviewStarted && (
+              <InterviewSession
+                questions={questions}
+                targetRole={targetRole || "Target Role"}
+                onComplete={(qa) => setQaPairs(qa)}
+              />
+            )}
+          </>
         )}
         </>
       )}

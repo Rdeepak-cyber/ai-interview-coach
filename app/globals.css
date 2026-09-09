@@ -71,3 +71,60 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .question-meta .easy { color: #357354; }.question-meta .medium { color: #9b6322; }.question-meta .hard { color: #a43f37; }
 @media (max-width: 600px) { .understanding-action { align-items: stretch; flex-direction: column; } .profile-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { main { width: min(100% - 28px, 920px); padding-top: 45px; } .actions, .role-control { align-items: stretch; flex-direction: column-reverse; } button { width: 100%; } .question-list li { align-items: flex-start; flex-direction: column; } .question-meta { flex-direction: row; margin-left: 31px; } }
+
+/* Phase 4: Text-Based Interview Session */
+.interview-session { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); box-shadow: 0 14px 38px rgba(26, 54, 48, .05); }
+.session-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.session-status-badge { border: 1px solid #c7d9d1; color: #376457; font-size: .72rem; font-weight: 800; letter-spacing: .1em; padding: 6px 10px; border-radius: 2px; text-transform: uppercase; }
+.session-status-badge.completed { background: #dce9e1; color: var(--deep); border-color: #a8bbb5; }
+.progress-container { margin-bottom: 28px; }
+.progress-bar-track { background: #e2eae6; border-radius: 999px; height: 8px; overflow: hidden; width: 100%; }
+.progress-bar-fill { background: var(--deep); height: 100%; transition: width 0.3s ease; border-radius: 999px; }
+.progress-legend { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); margin-top: 8px; }
+.interview-active-card { border-top: 1px solid var(--line); padding-top: 24px; }
+.active-question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.question-counter-badge { color: #57716e; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.active-question-text { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.25rem, 2.5vw, 1.6rem); line-height: 1.35; color: var(--deep); margin: 0 0 16px; }
+.tip-box { background: #f4f8f4; border-left: 3px solid #638b7d; padding: 12px 16px; margin-bottom: 24px; }
+.tip-box p { margin: 0; font-size: .88rem; color: #2e4d44; line-height: 1.5; }
+.answer-input-container { margin-bottom: 24px; }
+.answer-input-label { display: block; color: var(--deep); font-size: .88rem; font-weight: 800; margin-bottom: 8px; }
+.session-textarea { width: 100%; background: #fff; border: 1px solid #aebdb7; border-radius: 2px; color: var(--ink); font-family: inherit; font-size: .98rem; line-height: 1.6; padding: 14px; resize: vertical; box-sizing: border-box; }
+.session-textarea:focus { border-color: #47766a; outline: 2px solid #c9ded5; outline-offset: 1px; }
+.answer-meta-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.word-count { font-size: .82rem; color: var(--muted); }
+.text-action-btn { background: none; border: none; color: var(--muted); font-size: .82rem; font-weight: 600; cursor: pointer; padding: 4px 6px; text-decoration: underline; }
+.text-action-btn:hover { color: var(--deep); background: none; }
+.session-navigation-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 20px; margin-top: 10px; }
+.session-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 24px 0 32px; }
+.stat-card { background: #f7faf8; border: 1px solid #dce5e0; border-radius: 3px; padding: 16px; }
+.stat-label { display: block; color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.stat-value { color: var(--deep); font-family: Georgia, "Times New Roman", serif; font-size: 1.6rem; line-height: 1.1; }
+.qa-review-list { margin: 32px 0 36px; }
+.qa-review-list h3 { font-size: 1.2rem; font-family: Georgia, "Times New Roman", serif; color: var(--deep); margin: 0 0 16px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.qa-review-card { border: 1px solid var(--line); border-radius: 3px; background: #fff; padding: 20px; margin-bottom: 16px; }
+.qa-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+.qa-question-title { display: flex; gap: 12px; align-items: flex-start; }
+.qa-question-title h4 { font-family: Georgia, "Times New Roman", serif; font-size: 1.05rem; line-height: 1.35; color: var(--deep); margin: 0; }
+.qa-answer-container { background: #f8faf8; border-left: 3px solid #82a89c; padding: 14px 16px; border-radius: 0 2px 2px 0; }
+.qa-answer-text { font-size: .95rem; line-height: 1.6; color: #243532; margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; }
+.qa-answer-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2ece7; padding-top: 8px; }
+.inline-edit-wrapper { background: #f8faf8; padding: 16px; border: 1px solid #c7d9d1; border-radius: 2px; }
+.edit-label { display: block; font-size: .82rem; font-weight: 700; color: var(--deep); margin-bottom: 6px; }
+.inline-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.small-btn { padding: 8px 14px; font-size: .84rem; }
+.phase-handoff-card { background: #153b42; border-radius: 4px; color: #eaf1ec; padding: clamp(20px, 4vw, 32px); margin-top: 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+.phase-handoff-card .eyebrow { color: #a9cdbd; margin-bottom: 6px; }
+.phase-handoff-card h3 { color: #fff; font-family: Georgia, "Times New Roman", serif; font-size: 1.35rem; margin: 0 0 6px; }
+.phase-handoff-card p { color: #c3d5cb; font-size: .9rem; line-height: 1.5; margin: 0; max-width: 520px; }
+.handoff-actions { display: flex; gap: 10px; align-items: center; }
+.phase-handoff-card .secondary { border-color: rgba(255, 255, 255, 0.4); color: #fff; }
+.phase-handoff-card .secondary:hover { background: rgba(255, 255, 255, 0.1); }
+@media (max-width: 600px) {
+  .session-header { flex-direction: column; align-items: flex-start; }
+  .session-navigation-bar { flex-direction: column-reverse; gap: 12px; }
+  .session-navigation-bar button { width: 100%; }
+  .phase-handoff-card { flex-direction: column; align-items: stretch; }
+  .handoff-actions { flex-direction: column; width: 100%; }
+  .qa-card-header { flex-direction: column; }
+}
