@@ -164,7 +164,7 @@ export default function Home() {
           <div className="understanding-action">
             <div>
               <p className="eyebrow">02 RESUME UNDERSTANDING</p>
-              <p className="confirmation-note">If the extracted text looks right, let Claude turn it into a structured experience profile.</p>
+              <p className="confirmation-note">If the extracted text looks right, let AI turn it into a structured experience profile.</p>
             </div>
             <button type="button" onClick={understandResume} disabled={isUnderstanding}>
               {isUnderstanding ? "Understanding resume…" : "Understand my resume"}

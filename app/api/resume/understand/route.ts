@@ -4,15 +4,15 @@ import { isResumeProfile, resumeProfileSchema } from "../../../../lib/resume-pro
 export const runtime = "nodejs";
 
 const MAX_RESUME_TEXT_LENGTH = 100_000;
-const TOOL_NAME = "extract_resume_profile";
+const RESPONSE_SCHEMA_NAME = "resume_profile";
 
 function error(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return error("Claude is not configured. Add ANTHROPIC_API_KEY to your .env.local file and restart the app.", 503);
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return error("Groq is not configured. Add GROQ_API_KEY to your .env.local file and restart the app.", 503);
 
   try {
     const body: unknown = await request.json();
@@ -21,42 +21,60 @@ export async function POST(request: Request) {
     if (typeof resumeText !== "string" || !resumeText.trim()) return error("Resume text is required.", 400);
     if (resumeText.length > MAX_RESUME_TEXT_LENGTH) return error("This resume is too long to analyze. Please upload a shorter version.", 413);
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01"
+        authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
         max_tokens: 1600,
-        system: "You are a precise resume analyst. Only use facts explicitly supported by the resume. Do not infer or invent employers, dates, skills, projects, or experience. Use an empty list when information is absent. Describe gaps only when dates clearly support one; otherwise return an empty list.",
-        messages: [{ role: "user", content: `Analyze this resume:\n\n${resumeText}` }],
-        tools: [{
-          name: TOOL_NAME,
-          description: "Return the complete normalized resume profile.",
-          input_schema: resumeProfileSchema
-        }],
-        tool_choice: { type: "tool", name: TOOL_NAME }
+        messages: [
+          {
+            role: "system",
+            content: "You are a precise resume analyst. Only use facts explicitly supported by the resume. Do not infer or invent employers, dates, skills, projects, or experience. Use an empty list when information is absent. Describe gaps only when dates clearly support one; otherwise return an empty list."
+          },
+          { role: "user", content: `Analyze this resume:\n\n${resumeText}` }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: RESPONSE_SCHEMA_NAME,
+            strict: true,
+            schema: resumeProfileSchema
+          }
+        }
       })
     });
 
     const payload: unknown = await response.json();
     if (!response.ok) {
-      console.error("Claude API error", payload);
-      return error("Claude could not analyze this resume right now. Please try again.", 502);
+      console.error("Groq API error", payload);
+      return error("Groq could not analyze this resume right now. Please try again.", 502);
     }
 
-    const content = typeof payload === "object" && payload !== null && "content" in payload ? (payload as { content?: unknown }).content : undefined;
-    const toolCall = Array.isArray(content)
-      ? content.find((block) => typeof block === "object" && block !== null && (block as { type?: unknown }).type === "tool_use" && (block as { name?: unknown }).name === TOOL_NAME)
-      : undefined;
-    const profile = toolCall && typeof toolCall === "object" ? (toolCall as { input?: unknown }).input : undefined;
+    const choices =
+      typeof payload === "object" &&
+      payload !== null &&
+      "choices" in payload &&
+      Array.isArray((payload as { choices?: unknown }).choices)
+        ? (payload as { choices: Array<{ message?: { content?: unknown } }> }).choices
+        : undefined;
+    const content = choices?.[0]?.message?.content;
+
+    if (typeof content !== "string") return error("Groq returned an empty profile. Please try again.", 502);
+
+    let profile: unknown;
+    try {
+      profile = JSON.parse(content);
+    } catch {
+      return error("Groq returned an invalid profile. Please try again.", 502);
+    }
 
     if (!isResumeProfile(profile)) {
-      console.error("Claude returned an invalid resume profile", profile);
-      return error("Claude returned an invalid profile. Please try again.", 502);
+      console.error("Groq returned an invalid resume profile", profile);
+      return error("Groq returned an invalid profile. Please try again.", 502);
     }
 
     return NextResponse.json({ profile });
