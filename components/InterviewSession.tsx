@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
+import FeedbackReportView from "./FeedbackReportView";
+import type { FeedbackReport } from "../lib/feedback-report";
 import type { InterviewQuestion } from "../lib/interview-question";
 import { formatWordCount, type InterviewQA } from "../lib/interview-session";
 
@@ -20,6 +22,9 @@ export default function InterviewSession({
   const [isCompleted, setIsCompleted] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
+  const [feedbackReport, setFeedbackReport] = useState<FeedbackReport | null>(null);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const textareaId = useId();
 
   const currentQuestion = questions[currentIndex];
@@ -82,11 +87,60 @@ export default function InterviewSession({
   }
 
   function handleRestart() {
-    if (window.confirm("Are you sure you want to restart this interview session? Your answers will be cleared.")) {
+    if (window.confirm("Are you sure you want to restart this interview session? Your answers and feedback report will be cleared.")) {
       setAnswers({});
       setCurrentIndex(0);
       setIsCompleted(false);
       setEditingIndex(null);
+      setEditingText("");
+      setFeedbackReport(null);
+      setFeedbackError(null);
+      setIsGeneratingFeedback(false);
+    }
+  }
+
+  async function handleGenerateFeedback() {
+    // If an in-place edit is currently open, commit its latest value first
+    let latestAnswers = { ...answers };
+    if (editingIndex !== null && editingText.trim().length > 0) {
+      latestAnswers[editingIndex] = editingText;
+      setAnswers(latestAnswers);
+      setEditingIndex(null);
+    }
+
+    const latestQAPairs: InterviewQA[] = questions.map((q, idx) => ({
+      question: q.question,
+      type: q.type,
+      difficulty: q.difficulty,
+      answer: (latestAnswers[idx] ?? "").trim(),
+    }));
+
+    // Notify parent of the latest answers (including all edits)
+    onComplete?.(latestQAPairs);
+
+    setIsGeneratingFeedback(true);
+    setFeedbackError(null);
+
+    try {
+      const response = await fetch("/api/feedback/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          role: targetRole,
+          qaPairs: latestQAPairs,
+        }),
+      });
+
+      const data = (await response.json()) as { report?: FeedbackReport; error?: string };
+      if (!response.ok || !data.report) {
+        throw new Error(data.error || "Failed to generate feedback report.");
+      }
+
+      setFeedbackReport(data.report);
+    } catch (caughtError) {
+      setFeedbackError(caughtError instanceof Error ? caughtError.message : "Failed to generate feedback report.");
+    } finally {
+      setIsGeneratingFeedback(false);
     }
   }
 
@@ -243,21 +297,36 @@ export default function InterviewSession({
 
         <div className="phase-handoff-card">
           <div>
-            <p className="eyebrow">READY FOR PHASE 5</p>
-            <h3>Next: AI Feedback Report</h3>
+            <p className="eyebrow">05 AI FEEDBACK REPORT</p>
+            <h3>Ready for AI Feedback</h3>
             <p className="muted-copy">
-              All responses are stored in session state. Phase 5 will send these answers to Groq to generate strengths, weak spots, STAR methodology evaluation, and targeted improvement suggestions.
+              All responses (including your latest edits) will be evaluated by Groq against the <strong>{targetRole}</strong> role. We’ll analyze overall strengths, weak spots, improvement suggestions, and perform a STAR-method check for behavioral answers.
             </p>
           </div>
           <div className="handoff-actions">
-            <button type="button" className="secondary" onClick={handleRestart}>
+            <button type="button" className="secondary" onClick={handleRestart} disabled={isGeneratingFeedback}>
               Restart interview
             </button>
-            <button type="button" disabled title="Phase 5 is the next phase to build">
-              Generate feedback report (Phase 5)
+            <button
+              type="button"
+              onClick={handleGenerateFeedback}
+              disabled={isGeneratingFeedback}
+            >
+              {isGeneratingFeedback ? "Generating feedback…" : "Generate feedback report"}
             </button>
           </div>
         </div>
+
+        {feedbackError && <p className="message error" role="alert">{feedbackError}</p>}
+
+        {feedbackReport && (
+          <FeedbackReportView
+            report={feedbackReport}
+            qaPairs={allQaPairs}
+            targetRole={targetRole}
+            onRestart={handleRestart}
+          />
+        )}
       </section>
     );
   }
