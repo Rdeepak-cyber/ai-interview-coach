@@ -5,6 +5,7 @@ import FeedbackReportView from "./FeedbackReportView";
 import type { FeedbackReport } from "../lib/feedback-report";
 import type { InterviewQuestion } from "../lib/interview-question";
 import { formatWordCount, type InterviewQA } from "../lib/interview-session";
+import { useVoice } from "../lib/voice";
 
 type InterviewSessionProps = {
   questions: InterviewQuestion[];
@@ -27,6 +28,16 @@ export default function InterviewSession({
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const textareaId = useId();
 
+  const voice = useVoice({
+    onTranscript: (updatedText) => {
+      setAnswers((prev) => ({
+        ...prev,
+        [currentIndex]: updatedText,
+      }));
+    },
+    getCurrentText: () => answers[currentIndex] ?? "",
+  });
+
   const currentQuestion = questions[currentIndex];
   const currentAnswer = answers[currentIndex] ?? "";
   const { words, chars } = formatWordCount(currentAnswer);
@@ -45,6 +56,8 @@ export default function InterviewSession({
 
   function handleNext() {
     if (!hasAnswer) return;
+    voice.stopListening();
+    voice.stopSpeaking();
 
     if (isLastQuestion) {
       finishInterview();
@@ -55,11 +68,16 @@ export default function InterviewSession({
 
   function handlePrev() {
     if (currentIndex > 0) {
+      voice.stopListening();
+      voice.stopSpeaking();
       setCurrentIndex((prev) => prev - 1);
     }
   }
 
   function handleSkip() {
+    voice.stopListening();
+    voice.stopSpeaking();
+
     setAnswers((prev) => ({
       ...prev,
       [currentIndex]: "[Skipped by candidate]",
@@ -76,6 +94,8 @@ export default function InterviewSession({
   }
 
   function finishInterview(finalAnswers = answers) {
+    voice.stopListening();
+    voice.stopSpeaking();
     setIsCompleted(true);
     const qaPairs: InterviewQA[] = questions.map((q, idx) => ({
       question: q.question,
@@ -358,6 +378,26 @@ export default function InterviewSession({
       <div className="interview-active-card">
         <div className="active-question-header">
           <span className="question-counter-badge">Question {currentIndex + 1}</span>
+          <div className="question-header-left">
+            <span className="question-counter-badge">Question {currentIndex + 1}</span>
+            {voice.synthesisSupported && (
+              <button
+                type="button"
+                className={`voice-listen-btn ${voice.isSpeaking ? "is-speaking" : ""}`}
+                onClick={() => {
+                  if (voice.isSpeaking) {
+                    voice.stopSpeaking();
+                  } else {
+                    voice.speakText(currentQuestion.question);
+                  }
+                }}
+                title={voice.isSpeaking ? "Click to stop voice playback" : "Read question aloud"}
+              >
+                <span aria-hidden="true">{voice.isSpeaking ? "⏹️" : "🔊"}</span>
+                <span>{voice.isSpeaking ? "Stop audio" : "Listen to question"}</span>
+              </button>
+            )}
+          </div>
           <div className="question-meta">
             <span>{currentQuestion.type.replace("-", " ")}</span>
             <span className={`difficulty ${currentQuestion.difficulty}`}>
@@ -378,11 +418,54 @@ export default function InterviewSession({
           <label htmlFor={textareaId} className="answer-input-label">
             Your Answer:
           </label>
+          <div className="voice-input-header">
+            <label htmlFor={textareaId} className="answer-input-label">
+              Your Answer:
+            </label>
+            <div className="voice-actions">
+              {voice.recognitionSupported ? (
+                <button
+                  type="button"
+                  className={`voice-record-btn ${voice.isListening ? "is-recording" : ""}`}
+                  onClick={() => {
+                    if (voice.isListening) {
+                      voice.stopListening();
+                    } else {
+                      voice.startListening();
+                    }
+                  }}
+                  title={voice.isListening ? "Click to stop recording" : "Dictate your answer with microphone"}
+                >
+                  <span className={`mic-status-indicator ${voice.isListening ? "pulsing" : ""}`} aria-hidden="true" />
+                  <span aria-hidden="true">{voice.isListening ? "⏹️" : "🎙️"}</span>
+                  <span>{voice.isListening ? "Stop voice recording" : "Answer with voice"}</span>
+                </button>
+              ) : (
+                <span className="voice-compat-note" title="Web Speech API speech recognition is supported in Chrome, Edge, and Safari">
+                  Voice STT: Chrome/Edge recommended
+                </span>
+              )}
+            </div>
+          </div>
+
+          {voice.isListening && (
+            <div className="voice-live-banner" role="status" aria-live="polite">
+              <span className="pulsing-mic-badge" aria-hidden="true">🔴 LIVE</span>
+              <span>Listening to your microphone... Speak clearly. Your words are added to the answer field below in real time.</span>
+            </div>
+          )}
+
+          {voice.speechError && (
+            <p className="voice-error-text" role="alert">
+              ⚠️ {voice.speechError}
+            </p>
+          )}
+
           <textarea
             id={textareaId}
             className="session-textarea"
             rows={7}
-            placeholder="Type your answer here in detail... Focus on concrete examples and results."
+            placeholder="Type your answer here or click 'Answer with voice' above to speak... You can edit by typing at any time."
             value={currentAnswer}
             onChange={(e) => handleAnswerChange(e.target.value)}
           />

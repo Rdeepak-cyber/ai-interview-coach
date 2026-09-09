@@ -191,3 +191,23 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
   .report-footer-bar { flex-direction: column-reverse; gap: 12px; }
   .report-footer-bar button { width: 100%; }
 }
+
+/* Phase 6: Voice Mode (Web Speech API) */
+.question-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.voice-listen-btn { display: inline-flex; align-items: center; gap: 6px; background: #f1f6f3; border: 1px solid #bdd2c8; border-radius: 2px; color: var(--deep); font-size: .78rem; font-weight: 700; padding: 5px 9px; cursor: pointer; transition: all .2s ease; }
+.voice-listen-btn:hover { background: #e4efe8; border-color: #79a897; }
+.voice-listen-btn.is-speaking { background: #deeee5; border-color: #376457; color: #214b3f; animation: voicePulse 1.5s infinite ease-in-out; }
+.voice-input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 10px; }
+.voice-actions { display: flex; align-items: center; gap: 10px; }
+.voice-record-btn { display: inline-flex; align-items: center; gap: 8px; background: #f2f7f4; border: 1px solid #b7cec3; border-radius: 2px; color: var(--deep); font-size: .82rem; font-weight: 700; padding: 6px 12px; cursor: pointer; transition: all .2s ease; }
+.voice-record-btn:hover { background: #e4efe8; border-color: #638b7d; }
+.voice-record-btn.is-recording { background: #fdf0ee; border-color: #e59187; color: #a43f37; box-shadow: 0 0 0 2px rgba(229, 145, 135, 0.25); animation: micGlow 1.8s infinite ease-in-out; }
+.mic-status-indicator { display: none; width: 8px; height: 8px; border-radius: 50%; background: #a43f37; }
+.mic-status-indicator.pulsing { display: inline-block; animation: pulseDot 1s infinite; }
+.voice-compat-note { font-size: .74rem; color: var(--muted); border: 1px dashed #c7d9d1; padding: 4px 8px; border-radius: 2px; }
+.voice-live-banner { display: flex; align-items: center; gap: 10px; background: #edf7f1; border: 1px solid #b6dec6; border-radius: 2px; padding: 9px 13px; font-size: .85rem; color: #1e4532; margin-bottom: 10px; line-height: 1.45; }
+.pulsing-mic-badge { background: #a43f37; color: #fff; font-size: .68rem; font-weight: 800; padding: 3px 6px; border-radius: 2px; letter-spacing: .06em; flex: 0 0 auto; }
+.voice-error-text { font-size: .84rem; color: #a63526; margin: 0 0 10px; background: #fdf5f3; border: 1px solid #f2d2cb; padding: 8px 12px; border-radius: 2px; }
+@keyframes voicePulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@keyframes micGlow { 0% { box-shadow: 0 0 0 2px rgba(229, 145, 135, 0.2); } 50% { box-shadow: 0 0 0 5px rgba(229, 145, 135, 0.4); } 100% { box-shadow: 0 0 0 2px rgba(229, 145, 135, 0.2); } }
+@keyframes pulseDot { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
