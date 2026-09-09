@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import type { InterviewQuestion } from "../lib/interview-question";
 import type { ResumeProfile } from "../lib/resume-profile";
 
 type ParseResponse = {
@@ -20,12 +21,18 @@ export default function Home() {
   const [profile, setProfile] = useState<ResumeProfile | null>(null);
   const [understandingError, setUnderstandingError] = useState<string | null>(null);
   const [isUnderstanding, setIsUnderstanding] = useState(false);
+  const [targetRole, setTargetRole] = useState("");
+  const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null);
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
     setExtracted(null);
     setProfile(null);
     setUnderstandingError(null);
+    setQuestions(null);
+    setQuestionError(null);
 
     if (!nextFile) {
       setFile(null);
@@ -84,6 +91,8 @@ export default function Home() {
     setError(null);
     setProfile(null);
     setUnderstandingError(null);
+    setQuestions(null);
+    setQuestionError(null);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -93,6 +102,8 @@ export default function Home() {
     setIsUnderstanding(true);
     setUnderstandingError(null);
     setProfile(null);
+    setQuestions(null);
+    setQuestionError(null);
 
     try {
       const response = await fetch("/api/resume/understand", {
@@ -107,6 +118,29 @@ export default function Home() {
       setUnderstandingError(caughtError instanceof Error ? caughtError.message : "We could not understand that resume.");
     } finally {
       setIsUnderstanding(false);
+    }
+  }
+
+  async function generateQuestions(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!profile) return;
+
+    setIsGeneratingQuestions(true);
+    setQuestionError(null);
+    setQuestions(null);
+    try {
+      const response = await fetch("/api/questions/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ role: targetRole, profile })
+      });
+      const data = (await response.json()) as { questions?: InterviewQuestion[]; error?: string };
+      if (!response.ok || !data.questions) throw new Error(data.error || "We could not generate questions.");
+      setQuestions(data.questions);
+    } catch (caughtError) {
+      setQuestionError(caughtError instanceof Error ? caughtError.message : "We could not generate questions.");
+    } finally {
+      setIsGeneratingQuestions(false);
     }
   }
 
@@ -175,6 +209,7 @@ export default function Home() {
       )}
 
       {profile && (
+        <>
         <section className="profile" aria-labelledby="profile-title">
           <p className="eyebrow">STRUCTURED PROFILE</p>
           <h2 id="profile-title">Your experience, organized</h2>
@@ -202,6 +237,30 @@ export default function Home() {
             {profile.notableGaps.length ? <ul>{profile.notableGaps.map((gap) => <li key={gap}>{gap}</li>)}</ul> : <p className="muted-copy">No clearly supported gaps identified.</p>}
           </div>
         </section>
+        <section className="question-builder" aria-labelledby="questions-title">
+          <p className="eyebrow">03 QUESTION GENERATION</p>
+          <h2 id="questions-title">What role are you preparing for?</h2>
+          <p className="helper">We’ll combine this with your verified resume profile to make an 8–10 question practice set.</p>
+          <form onSubmit={generateQuestions}>
+            <label htmlFor="target-role">Target role or job title</label>
+            <div className="role-control">
+              <input id="target-role" value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="e.g. Senior Frontend Engineer" required minLength={2} maxLength={150} />
+              <button type="submit" disabled={isGeneratingQuestions}>{isGeneratingQuestions ? "Building your set…" : "Generate questions"}</button>
+            </div>
+          </form>
+          {questionError && <p className="message error" role="alert">{questionError}</p>}
+        </section>
+        {questions && (
+          <section className="question-list" aria-labelledby="question-list-title">
+            <p className="eyebrow">PRACTICE SET READY</p>
+            <h2 id="question-list-title">Your interview questions</h2>
+            <ol>
+              {questions.map((item, index) => <li key={`${index}-${item.question}`}><div><span className="question-index">{String(index + 1).padStart(2, "0")}</span><p>{item.question}</p></div><div className="question-meta"><span>{item.type.replace("-", " ")}</span><span className={`difficulty ${item.difficulty}`}>{item.difficulty}</span></div></li>)}
+            </ol>
+            <p className="confirmation-note">Review the set. Phase 4 will present these questions one at a time for your answers.</p>
+          </section>
+        )}
+        </>
       )}
     </main>
   );
