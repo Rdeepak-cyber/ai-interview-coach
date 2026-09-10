@@ -189,11 +189,12 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 }
 
 /* Phase 5: Feedback Report */
-.feedback-report { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 36px; padding: clamp(25px, 5vw, 46px); box-shadow: 0 14px 38px rgba(26, 54, 48, .05); }
-.report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.overall-summary-card { background: #153b42; border-radius: 4px; color: #eaf1ec; padding: clamp(24px, 4vw, 36px); margin: 28px 0 36px; }
+.feedback-report { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); box-shadow: 0 14px 38px rgba(26, 54, 48, .05); }
+.report-header { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; margin-bottom: 26px; padding-bottom: 20px; }
+.feedback-report > h2 { font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 10px; }
+.overall-summary-card { background: #153b42; border: 3px solid rgba(236, 107, 72, .75); border-radius: 4px; color: #eaf1ec; padding: clamp(27px, 5vw, 44px); margin: 30px 0 42px; box-shadow: 0 16px 32px rgba(21, 59, 66, .14); }
 .overall-summary-card .eyebrow { color: #a9cdbd; margin-bottom: 12px; }
-.overall-summary-text { font-family: Georgia, "Times New Roman", serif; font-size: 1.15rem; line-height: 1.65; color: #ffffff; margin: 0 0 28px; }
+.overall-summary-text { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.2rem, 2vw, 1.45rem); line-height: 1.6; color: #ffffff; margin: 0 0 30px; max-width: 850px; }
 .summary-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .summary-col { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(220, 238, 228, 0.16); border-radius: 3px; padding: 20px; }
 .summary-col h3 { font-size: .84rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 14px; }
@@ -245,6 +246,7 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 
 @media (max-width: 600px) {
   .summary-columns, .feedback-grid, .star-grid { grid-template-columns: 1fr; }
+  .report-header { align-items: flex-start; flex-direction: column; gap: 12px; }
   .feedback-card-header { flex-direction: column; align-items: flex-start; }
   .feedback-header-right { width: 100%; justify-content: space-between; }
   .report-footer-bar { flex-direction: column-reverse; gap: 12px; }

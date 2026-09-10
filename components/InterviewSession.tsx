@@ -11,12 +11,18 @@ type InterviewSessionProps = {
   questions: InterviewQuestion[];
   targetRole: string;
   onComplete?: (qaPairs: InterviewQA[]) => void;
+  onFeedbackGenerated?: () => void;
+  onRestart?: () => void;
+  showFeedbackOnly?: boolean;
 };
 
 export default function InterviewSession({
   questions,
   targetRole,
   onComplete,
+  onFeedbackGenerated,
+  onRestart,
+  showFeedbackOnly = false,
 }: InterviewSessionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -116,6 +122,7 @@ export default function InterviewSession({
       setFeedbackReport(null);
       setFeedbackError(null);
       setIsGeneratingFeedback(false);
+      onRestart?.();
     }
   }
 
@@ -157,6 +164,7 @@ export default function InterviewSession({
       }
 
       setFeedbackReport(data.report);
+      onFeedbackGenerated?.();
     } catch (caughtError) {
       setFeedbackError(caughtError instanceof Error ? caughtError.message : "Failed to generate feedback report.");
     } finally {
@@ -213,6 +221,17 @@ export default function InterviewSession({
   }));
 
   const totalWords = allQaPairs.reduce((sum, item) => sum + formatWordCount(item.answer).words, 0);
+
+  if (isCompleted && feedbackReport && showFeedbackOnly) {
+    return (
+      <FeedbackReportView
+        report={feedbackReport}
+        qaPairs={allQaPairs}
+        targetRole={targetRole}
+        onRestart={handleRestart}
+      />
+    );
+  }
 
   if (isCompleted) {
     return (

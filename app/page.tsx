@@ -32,6 +32,7 @@ export default function Home() {
   const [qaPairs, setQaPairs] = useState<InterviewQA[] | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
+  const [isFeedbackReady, setIsFeedbackReady] = useState(false);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
@@ -42,6 +43,7 @@ export default function Home() {
     setQuestionError(null);
     setIsInterviewStarted(false);
     setQaPairs(null);
+    setIsFeedbackReady(false);
 
     if (!nextFile) {
       setFile(null);
@@ -121,6 +123,7 @@ export default function Home() {
     setQuestionError(null);
     setIsInterviewStarted(false);
     setQaPairs(null);
+    setIsFeedbackReady(false);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -134,6 +137,7 @@ export default function Home() {
     setQuestionError(null);
     setIsInterviewStarted(false);
     setQaPairs(null);
+    setIsFeedbackReady(false);
 
     try {
       const response = await fetch("/api/resume/understand", {
@@ -161,6 +165,7 @@ export default function Home() {
     setQuestions(null);
     setIsInterviewStarted(false);
     setQaPairs(null);
+    setIsFeedbackReady(false);
     try {
       const response = await fetch("/api/questions/generate", {
         method: "POST",
@@ -186,7 +191,7 @@ export default function Home() {
           if (step === 1) return true;
           if (step === 2 || step === 3) return Boolean(profile);
           if (step === 4) return Boolean(questions);
-          return false;
+          return isFeedbackReady;
         }}
       />
 
@@ -373,11 +378,14 @@ export default function Home() {
 
           </>
         )}
-        {questions && isInterviewStarted && currentStep === 4 && (
+        {questions && isInterviewStarted && currentStep >= 4 && (
           <InterviewSession
             questions={questions}
             targetRole={targetRole || "Target Role"}
             onComplete={(qa) => setQaPairs(qa)}
+            onFeedbackGenerated={() => { setIsFeedbackReady(true); setCurrentStep(5); }}
+            onRestart={() => { setIsFeedbackReady(false); setCurrentStep(4); }}
+            showFeedbackOnly={currentStep === 5}
           />
         )}
         </>
