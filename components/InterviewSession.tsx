@@ -415,9 +415,6 @@ export default function InterviewSession({
         </aside>
 
         <div className="answer-input-container">
-          <label htmlFor={textareaId} className="answer-input-label">
-            Your Answer:
-          </label>
           <div className="voice-input-header">
             <label htmlFor={textareaId} className="answer-input-label">
               Your Answer:
