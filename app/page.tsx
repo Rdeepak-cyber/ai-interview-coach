@@ -2,7 +2,7 @@
 
 import { ChangeEvent, DragEvent, FormEvent, useRef, useState } from "react";
 import InterviewSession from "../components/InterviewSession";
-import HeaderStepper from "../components/HeaderStepper";
+import HeaderStepper, { type StepId } from "../components/HeaderStepper";
 import type { InterviewQuestion } from "../lib/interview-question";
 import type { InterviewQA } from "../lib/interview-session";
 import type { ResumeProfile } from "../lib/resume-profile";
@@ -31,6 +31,7 @@ export default function Home() {
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [qaPairs, setQaPairs] = useState<InterviewQA[] | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [currentStep, setCurrentStep] = useState<StepId>(1);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
@@ -143,6 +144,7 @@ export default function Home() {
       const data = (await response.json()) as { profile?: ResumeProfile; error?: string };
       if (!response.ok || !data.profile) throw new Error(data.error || "We could not understand that resume.");
       setProfile(data.profile);
+      setCurrentStep(2);
     } catch (caughtError) {
       setUnderstandingError(caughtError instanceof Error ? caughtError.message : "We could not understand that resume.");
     } finally {
@@ -177,15 +179,26 @@ export default function Home() {
 
   return (
     <main>
-      <HeaderStepper currentStep={1} onSelectStep={() => undefined} canAccessStep={(step) => step === 1} />
+      <HeaderStepper
+        currentStep={currentStep}
+        onSelectStep={setCurrentStep}
+        canAccessStep={(step) => {
+          if (step === 1) return true;
+          if (step === 2 || step === 3) return Boolean(profile);
+          if (step === 4) return Boolean(questions);
+          return false;
+        }}
+      />
 
-      <section className="hero upload-hero" aria-labelledby="page-title">
-        <div className="hero-kicker"><span className="hero-kicker-line" /> STEP 01 / RESUME INGESTION</div>
-        <h1 id="page-title">Start with the story your resume tells.</h1>
-        <p className="intro">Upload your resume and confirm what we can read. Personalized practice comes next.</p>
-      </section>
+      {currentStep === 1 && (
+        <section className="hero upload-hero" aria-labelledby="page-title">
+          <div className="hero-kicker"><span className="hero-kicker-line" /> STEP 01 / RESUME INGESTION</div>
+          <h1 id="page-title">Start with the story your resume tells.</h1>
+          <p className="intro">Upload your resume and confirm what we can read. Personalized practice comes next.</p>
+        </section>
+      )}
 
-      <section className="workspace" aria-labelledby="upload-title">
+      {currentStep === 1 && <section className="workspace" aria-labelledby="upload-title">
         <div className="workspace-heading">
           <div>
             <p className="eyebrow">YOUR STARTING POINT</p>
@@ -227,9 +240,9 @@ export default function Home() {
             <button type="submit" disabled={!file || isParsing} aria-busy={isParsing}>{isParsing ? <><span className="button-spinner" aria-hidden="true" /> Extracting text...</> : "Extract resume text"}</button>
           </div>
         </form>
-      </section>
+      </section>}
 
-      {extracted && (
+      {extracted && currentStep === 1 && (
         <section className="extraction" aria-labelledby="extraction-title">
           <div className="result-heading">
             <div>
@@ -255,9 +268,15 @@ export default function Home() {
 
       {profile && (
         <>
-        <section className="profile" aria-labelledby="profile-title">
-          <p className="eyebrow">STRUCTURED PROFILE</p>
-          <h2 id="profile-title">Your experience, organized</h2>
+        {currentStep === 2 && <section className="profile" aria-labelledby="profile-title">
+          <div className="profile-heading">
+            <div>
+              <p className="eyebrow">STEP 02 / RESUME PROFILE</p>
+              <h2 id="profile-title">Your experience, organized</h2>
+              <p className="profile-intro">Review the profile we built from your resume. This is the context your interview questions will use.</p>
+            </div>
+            <span className="profile-status"><span /> AI PROFILE READY</span>
+          </div>
           <div className="profile-grid">
             <article>
               <h3>Skills</h3>
@@ -281,8 +300,15 @@ export default function Home() {
             <h3>Notable gaps</h3>
             {profile.notableGaps.length ? <ul>{profile.notableGaps.map((gap) => <li key={gap}>{gap}</li>)}</ul> : <p className="muted-copy">No clearly supported gaps identified.</p>}
           </div>
-        </section>
-        <section className="question-builder" aria-labelledby="questions-title">
+          {currentStep === 2 && <div className="profile-continue">
+            <div>
+              <p className="eyebrow">NEXT STEP</p>
+              <p className="confirmation-note">Your profile is ready. Choose the role you want to practice for next.</p>
+            </div>
+            <button type="button" onClick={() => setCurrentStep(3)}>Continue to target role</button>
+          </div>}
+        </section>}
+        {currentStep === 3 && <section className="question-builder" aria-labelledby="questions-title">
           <p className="eyebrow">03 QUESTION GENERATION</p>
           <h2 id="questions-title">What role are you preparing for?</h2>
           <p className="helper">We’ll combine this with your verified resume profile to make an 8–10 question practice set.</p>
@@ -294,8 +320,8 @@ export default function Home() {
             </div>
           </form>
           {questionError && <p className="message error" role="alert">{questionError}</p>}
-        </section>
-        {questions && (
+        </section>}
+        {questions && currentStep === 3 && (
           <>
             <section className="question-list" aria-labelledby="question-list-title">
               <div className="result-heading">
@@ -328,7 +354,7 @@ export default function Home() {
                       Practice answering these questions one at a time. Your responses will be saved in session state for your feedback report.
                     </p>
                   </div>
-                  <button type="button" onClick={() => setIsInterviewStarted(true)}>
+                  <button type="button" onClick={() => { setIsInterviewStarted(true); setCurrentStep(4); }}>
                     Start text interview
                   </button>
                 </div>
@@ -339,14 +365,14 @@ export default function Home() {
               )}
             </section>
 
-            {isInterviewStarted && (
-              <InterviewSession
-                questions={questions}
-                targetRole={targetRole || "Target Role"}
-                onComplete={(qa) => setQaPairs(qa)}
-              />
-            )}
           </>
+        )}
+        {questions && isInterviewStarted && currentStep === 4 && (
+          <InterviewSession
+            questions={questions}
+            targetRole={targetRole || "Target Role"}
+            onComplete={(qa) => setQaPairs(qa)}
+          />
         )}
         </>
       )}

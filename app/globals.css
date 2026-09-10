@@ -77,6 +77,10 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .understanding-action .eyebrow { margin-bottom: 6px; }
 .understanding-action .confirmation-note { margin: 0; max-width: 545px; }
 .profile { background: #153b42; border-radius: 4px; color: #eaf1ec; margin-top: 28px; padding: clamp(25px, 5vw, 46px); }
+.profile-heading { align-items: flex-start; display: flex; gap: 24px; justify-content: space-between; }
+.profile-intro { color: #c3d5cb; font-size: .96rem; line-height: 1.6; margin: 16px 0 0; max-width: 590px; }
+.profile-status { align-items: center; border: 1px solid rgba(220, 238, 228, .28); color: #b9dacb; display: inline-flex; flex: 0 0 auto; font-size: .68rem; font-weight: 800; gap: 7px; letter-spacing: .1em; padding: 8px 10px; }
+.profile-status span { background: #8fe0b2; border-radius: 50%; height: 7px; width: 7px; }
 .profile .eyebrow { color: #a9cdbd; }
 .profile h2 { color: white; }
 .profile h3 { color: #b9dacb; font-size: .72rem; letter-spacing: .12em; margin: 0 0 14px; text-transform: uppercase; }
@@ -94,6 +98,10 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .role p { margin: 3px 0 0; }
 .role ul, .gaps ul { margin: 10px 0 0; padding-left: 18px; }
 .gaps { background: rgba(255, 255, 255, .03); }
+.profile-continue { align-items: center; border-top: 1px solid rgba(220, 238, 228, .2); display: flex; gap: 24px; justify-content: space-between; margin-top: 28px; padding-top: 24px; }
+.profile-continue .confirmation-note { color: #c3d5cb; }
+.profile-continue button { background: var(--accent); border-color: var(--accent); }
+.profile-continue button:hover:not(:disabled) { background: #d95737; }
 .question-builder, .question-list { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); }
 .question-builder label { color: var(--deep); display: block; font-size: .88rem; font-weight: 800; margin: 24px 0 8px; }
 .role-control { display: flex; gap: 12px; }
@@ -111,6 +119,7 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 @media (max-width: 600px) { .understanding-action { align-items: stretch; flex-direction: column; } .profile-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { main { width: min(100% - 28px, 920px); padding-top: 45px; } .actions, .role-control { align-items: stretch; flex-direction: column-reverse; } button { width: 100%; } .question-list li { align-items: flex-start; flex-direction: column; } .question-meta { flex-direction: row; margin-left: 31px; } }
 @media (max-width: 600px) { .app-header { margin-bottom: 52px; } .header-top-bar { align-items: flex-start; flex-direction: column; } .header-actions { align-items: flex-start; flex-direction: column; gap: 8px; } .workspace-heading { flex-direction: column; gap: 12px; } .upload-format-note { border-left: 0; border-top: 1px solid var(--line); padding: 10px 0 0; text-align: left; width: 100%; } .dropzone { align-items: flex-start; flex-wrap: wrap; min-height: 150px; padding: 22px; } .browse-hint { margin-left: 68px; } }
+@media (max-width: 600px) { .profile-heading, .profile-continue { align-items: stretch; flex-direction: column; } .profile-status { align-self: flex-start; } .profile-continue button { width: 100%; } }
 
 /* Phase 4: Text-Based Interview Session */
 .interview-session { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); box-shadow: 0 14px 38px rgba(26, 54, 48, .05); }
