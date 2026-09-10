@@ -1,7 +1,8 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useRef, useState } from "react";
 import InterviewSession from "../components/InterviewSession";
+import HeaderStepper from "../components/HeaderStepper";
 import type { InterviewQuestion } from "../lib/interview-question";
 import type { InterviewQA } from "../lib/interview-session";
 import type { ResumeProfile } from "../lib/resume-profile";
@@ -29,6 +30,7 @@ export default function Home() {
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [qaPairs, setQaPairs] = useState<InterviewQA[] | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
@@ -63,6 +65,23 @@ export default function Home() {
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     chooseFile(event.target.files?.[0] ?? null);
+  }
+
+  function onDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsDragActive(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLLabelElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setIsDragActive(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragActive(false);
+    chooseFile(event.dataTransfer.files?.[0] ?? null);
   }
 
   async function parseResume(event: FormEvent<HTMLFormElement>) {
@@ -158,19 +177,32 @@ export default function Home() {
 
   return (
     <main>
-      <section className="hero" aria-labelledby="page-title">
-        <p className="eyebrow">AI INTERVIEW COACH</p>
+      <HeaderStepper currentStep={1} onSelectStep={() => undefined} canAccessStep={(step) => step === 1} />
+
+      <section className="hero upload-hero" aria-labelledby="page-title">
+        <div className="hero-kicker"><span className="hero-kicker-line" /> STEP 01 / RESUME INGESTION</div>
         <h1 id="page-title">Start with the story your resume tells.</h1>
         <p className="intro">Upload your resume and confirm what we can read. Personalized practice comes next.</p>
       </section>
 
       <section className="workspace" aria-labelledby="upload-title">
-        <div className="step-label"><span>01</span> RESUME INGESTION</div>
-        <h2 id="upload-title">Add your resume</h2>
-        <p className="helper">PDF and DOCX accepted · Maximum file size 10 MB</p>
+        <div className="workspace-heading">
+          <div>
+            <p className="eyebrow">YOUR STARTING POINT</p>
+            <h2 id="upload-title">Add your resume</h2>
+          </div>
+          <span className="upload-format-note">PDF / DOCX<br /><small>Up to 10 MB</small></span>
+        </div>
+        <p className="helper">We use your resume to tailor every question to your experience.</p>
 
         <form onSubmit={parseResume}>
-          <label className={`dropzone ${file ? "has-file" : ""}`} htmlFor="resume">
+          <label
+            className={`dropzone ${file ? "has-file" : ""} ${isDragActive ? "is-dragging" : ""}`}
+            htmlFor="resume"
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+          >
             <input
               ref={inputRef}
               id="resume"
@@ -179,19 +211,20 @@ export default function Home() {
               accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={onFileChange}
             />
-            <span className="file-icon" aria-hidden="true">↥</span>
+            <span className="file-icon" aria-hidden="true"><span className="upload-arrow">↑</span></span>
             {file ? (
-              <span><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB · Ready to extract</small></span>
+              <span className="dropzone-copy"><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB · Ready to extract</small></span>
             ) : (
-              <span><strong>Choose a resume file</strong><small>or drag and drop it here</small></span>
+              <span className="dropzone-copy"><strong>Choose a resume file</strong><small>or drag and drop it here</small></span>
             )}
+            {!file && <span className="browse-hint">Browse files</span>}
           </label>
 
-          {error && <p className="message error" role="alert">{error}</p>}
+          {error && <p className="message error" id="resume-error" role="alert">{error}</p>}
 
           <div className="actions">
             {file && <button type="button" className="secondary" onClick={clearResume}>Remove file</button>}
-            <button type="submit" disabled={!file || isParsing}>{isParsing ? "Extracting text…" : "Extract resume text"}</button>
+            <button type="submit" disabled={!file || isParsing} aria-busy={isParsing}>{isParsing ? <><span className="button-spinner" aria-hidden="true" /> Extracting text...</> : "Extract resume text"}</button>
           </div>
         </form>
       </section>
