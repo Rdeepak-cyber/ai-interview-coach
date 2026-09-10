@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Interview Coach</string>
+    <string name="title_activity_main">Interview Coach</string>
+    <string name="package_name">com.deepak.interviewcoach</string>
+    <string name="custom_url_scheme">com.deepak.interviewcoach</string>
+</resources>
