@@ -103,23 +103,31 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .profile-continue button { background: var(--accent); border-color: var(--accent); }
 .profile-continue button:hover:not(:disabled) { background: #d95737; }
 .question-builder, .question-list { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); }
+.step-screen-heading { align-items: flex-start; display: flex; gap: 24px; justify-content: space-between; }
+.screen-intro { color: var(--muted); font-size: .96rem; line-height: 1.6; margin: 16px 0 0; max-width: 620px; }
+.step-screen-number { color: #dbe7df; font-family: var(--serif); font-size: 4rem; line-height: .8; }
 .question-builder label { color: var(--deep); display: block; font-size: .88rem; font-weight: 800; margin: 24px 0 8px; }
 .role-control { display: flex; gap: 12px; }
 .role-control input { background: #fff; border: 1px solid #aebdb7; border-radius: 2px; color: var(--ink); flex: 1; font: inherit; min-width: 0; padding: 12px; }
 .role-control input:focus { border-color: #47766a; outline: 2px solid #c9ded5; outline-offset: 1px; }
 .question-list ol { list-style: none; margin: 28px 0 0; padding: 0; }
+.question-set-context { color: var(--muted); font-size: .9rem; line-height: 1.5; margin: 10px 0 0; }
+.question-set-context strong { color: var(--deep); }
+.question-count { background: var(--soft-teal); border-color: #bfd6c9; border-radius: 999px; color: var(--deep); }
 .question-list li { border-top: 1px solid var(--line); display: flex; gap: 20px; justify-content: space-between; padding: 19px 0; }
 .question-list li > div:first-child { display: flex; gap: 16px; }
 .question-list li p { font-family: Georgia, "Times New Roman", serif; font-size: 1.08rem; line-height: 1.35; margin: 0; }
 .question-index { color: #64837a; font-size: .75rem; font-weight: 800; letter-spacing: .09em; padding-top: 4px; }
 .question-meta { align-items: flex-start; display: flex; flex: 0 0 auto; flex-direction: column; gap: 6px; }
-.question-meta span { border: 1px solid #c7d9d1; color: #45695f; font-size: .7rem; font-weight: 800; letter-spacing: .06em; padding: 5px 7px; text-transform: uppercase; }
-.question-meta .easy { color: #357354; }.question-meta .medium { color: #9b6322; }.question-meta .hard { color: #a43f37; }
+.question-meta span { border: 1px solid #c7d9d1; border-radius: 999px; color: #45695f; font-size: .7rem; font-weight: 800; letter-spacing: .06em; padding: 5px 9px; text-transform: uppercase; }
+.question-meta .question-type { background: #f3f7f4; }
+.question-meta .easy { background: #edf8f1; border-color: #c5e4d0; color: #357354; }.question-meta .medium { background: #fff8e9; border-color: #ead5a9; color: #9b6322; }.question-meta .hard { background: #fdf1ef; border-color: #efc8c1; color: #a43f37; }
 @media (max-width: 720px) { .stepper-name { display: none; } .stepper-item { justify-content: center; } .stepper-connector { margin: 0 7px; } }
 @media (max-width: 600px) { .understanding-action { align-items: stretch; flex-direction: column; } .profile-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { main { width: min(100% - 28px, 920px); padding-top: 45px; } .actions, .role-control { align-items: stretch; flex-direction: column-reverse; } button { width: 100%; } .question-list li { align-items: flex-start; flex-direction: column; } .question-meta { flex-direction: row; margin-left: 31px; } }
 @media (max-width: 600px) { .app-header { margin-bottom: 52px; } .header-top-bar { align-items: flex-start; flex-direction: column; } .header-actions { align-items: flex-start; flex-direction: column; gap: 8px; } .workspace-heading { flex-direction: column; gap: 12px; } .upload-format-note { border-left: 0; border-top: 1px solid var(--line); padding: 10px 0 0; text-align: left; width: 100%; } .dropzone { align-items: flex-start; flex-wrap: wrap; min-height: 150px; padding: 22px; } .browse-hint { margin-left: 68px; } }
 @media (max-width: 600px) { .profile-heading, .profile-continue { align-items: stretch; flex-direction: column; } .profile-status { align-self: flex-start; } .profile-continue button { width: 100%; } }
+@media (max-width: 600px) { .step-screen-heading { gap: 14px; } .step-screen-number { font-size: 2.8rem; } .question-set-context { margin-top: 8px; } }
 
 /* Phase 4: Text-Based Interview Session */
 .interview-session { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); box-shadow: 0 14px 38px rgba(26, 54, 48, .05); }

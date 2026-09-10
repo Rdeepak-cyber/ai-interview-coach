@@ -309,14 +309,19 @@ export default function Home() {
           </div>}
         </section>}
         {currentStep === 3 && <section className="question-builder" aria-labelledby="questions-title">
-          <p className="eyebrow">03 QUESTION GENERATION</p>
-          <h2 id="questions-title">What role are you preparing for?</h2>
-          <p className="helper">We’ll combine this with your verified resume profile to make an 8–10 question practice set.</p>
+          <div className="step-screen-heading">
+            <div>
+              <p className="eyebrow">STEP 03 / TARGET ROLE</p>
+              <h2 id="questions-title">Set your interview direction</h2>
+              <p className="screen-intro">Tell us which role you want to practice for. We’ll combine it with your resume profile to build a focused question set.</p>
+            </div>
+            <span className="step-screen-number">03</span>
+          </div>
           <form onSubmit={generateQuestions}>
             <label htmlFor="target-role">Target role or job title</label>
             <div className="role-control">
               <input id="target-role" value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="e.g. Senior Frontend Engineer" required minLength={2} maxLength={150} />
-              <button type="submit" disabled={isGeneratingQuestions}>{isGeneratingQuestions ? "Building your set…" : "Generate questions"}</button>
+              <button type="submit" disabled={isGeneratingQuestions} aria-busy={isGeneratingQuestions}>{isGeneratingQuestions ? <><span className="button-spinner" aria-hidden="true" /> Building your set...</> : "Generate questions"}</button>
             </div>
           </form>
           {questionError && <p className="message error" role="alert">{questionError}</p>}
@@ -328,8 +333,9 @@ export default function Home() {
                 <div>
                   <p className="eyebrow">PRACTICE SET READY</p>
                   <h2 id="question-list-title">Your interview questions</h2>
+                  <p className="question-set-context">Built for <strong>{targetRole}</strong> using your resume profile.</p>
                 </div>
-                <span className="format-tag">{questions.length} QUESTIONS</span>
+                <span className="format-tag question-count">{questions.length} QUESTIONS</span>
               </div>
               <ol>
                 {questions.map((item, index) => (
@@ -339,7 +345,7 @@ export default function Home() {
                       <p>{item.question}</p>
                     </div>
                     <div className="question-meta">
-                      <span>{item.type.replace("-", " ")}</span>
+                      <span className="question-type">{item.type.replace("-", " ")}</span>
                       <span className={`difficulty ${item.difficulty}`}>{item.difficulty}</span>
                     </div>
                   </li>
