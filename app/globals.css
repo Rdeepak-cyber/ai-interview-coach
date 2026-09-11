@@ -18,6 +18,27 @@ main { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 96
 .auth-success { background: #edf7f1; border: 1px solid #b6dec6; color: #1e4532; }
 .auth-switch { border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; margin: 28px 0 0; padding-top: 22px; text-align: center; }
 .auth-switch .text-action-btn { color: var(--accent); padding: 0; }
+.sessions-header { margin-bottom: 68px; }
+.sessions-back-link, .report-back-button { color: var(--deep); text-decoration: none; }
+.sessions-back-link:hover, .report-back-button:hover { background: transparent; color: var(--accent); }
+.brand-link { text-decoration: none; }
+.sessions-page { max-width: 920px; }
+.sessions-page-heading { align-items: flex-start; display: flex; gap: 24px; justify-content: space-between; margin-bottom: 34px; }
+.sessions-page-heading h1 { font-size: clamp(2.5rem, 6vw, 4rem); }
+.sessions-state { align-items: center; color: var(--muted); display: flex; gap: 9px; padding: 28px 0; }
+.dark-spinner { border-color: #c5d4cc; border-top-color: var(--deep); margin-right: 0; }
+.sessions-empty { background: var(--paper); border: 1px dashed #b8cbc1; border-radius: 4px; padding: clamp(28px, 6vw, 54px); }
+.sessions-empty h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); margin-bottom: 24px; }
+.button-link { background: var(--deep); border: 1px solid var(--deep); color: #fff; display: inline-block; font-size: .92rem; font-weight: 700; padding: 12px 18px; text-decoration: none; }
+.button-link:hover { background: #24545c; }
+.session-history-list { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.session-history-item { align-items: center; background: transparent; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); display: grid; gap: 18px; grid-template-columns: 130px 1fr 24px; padding: 22px 26px; text-align: left; width: 100%; }
+.session-history-item:last-child { border-bottom: 0; }
+.session-history-item:hover { background: #f4f8f3; }
+.session-history-date { color: var(--muted); font-size: .78rem; }
+.session-history-role { color: var(--deep); font-family: var(--serif); font-size: 1.2rem; }
+.session-history-arrow { color: var(--accent); font-size: 1.25rem; }
+.report-back-button { display: block; margin: 0 0 18px; padding-left: 0; }
 .app-header { border-bottom: 1px solid var(--line); margin-bottom: 78px; padding-bottom: 20px; }
 .header-top-bar { align-items: center; display: flex; justify-content: space-between; gap: 24px; }
 .brand-lockup { align-items: center; display: flex; gap: 11px; }
@@ -26,6 +47,10 @@ main { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 96
 .brand-title { color: var(--deep); font-size: .86rem; font-weight: 800; letter-spacing: .02em; }
 .brand-subtitle { color: var(--muted); font-size: .68rem; margin-top: 3px; }
 .header-actions { align-items: center; display: flex; gap: 18px; }
+.logout-btn { color: var(--accent); padding: 4px 0; }
+.logout-btn:hover:not(:disabled) { background: transparent; color: #b8432c; }
+.history-btn { color: var(--deep); padding: 4px 0; }
+.history-btn:hover:not(:disabled) { background: transparent; color: var(--accent); }
 .logout-btn { color: var(--accent); padding: 4px 0; }
 .logout-btn:hover:not(:disabled) { background: transparent; color: #b8432c; }
 .current-step-pill { align-items: center; background: var(--soft-teal); border: 1px solid #cfe0d6; color: var(--deep); display: flex; font-size: .77rem; gap: 8px; padding: 9px 12px; }
@@ -146,6 +171,7 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 @media (max-width: 600px) { .app-header { margin-bottom: 52px; } .header-top-bar { align-items: flex-start; flex-direction: column; } .header-actions { align-items: flex-start; flex-direction: column; gap: 8px; } .workspace-heading { flex-direction: column; gap: 12px; } .upload-format-note { border-left: 0; border-top: 1px solid var(--line); padding: 10px 0 0; text-align: left; width: 100%; } .dropzone { align-items: flex-start; flex-wrap: wrap; min-height: 150px; padding: 22px; } .browse-hint { margin-left: 68px; } }
 @media (max-width: 600px) { .profile-heading, .profile-continue { align-items: stretch; flex-direction: column; } .profile-status { align-self: flex-start; } .profile-continue button { width: 100%; } }
 @media (max-width: 600px) { .step-screen-heading { gap: 14px; } .step-screen-number { font-size: 2.8rem; } .question-set-context { margin-top: 8px; } }
+@media (max-width: 600px) { .sessions-header { margin-bottom: 48px; } .sessions-page-heading { gap: 12px; } .session-history-item { gap: 8px; grid-template-columns: 1fr 24px; padding: 20px; } .session-history-date { grid-column: 1; grid-row: 2; } .session-history-role { grid-column: 1; grid-row: 1; } .session-history-arrow { grid-column: 2; grid-row: 1 / span 2; } }
 
 /* Phase 4: Text-Based Interview Session */
 .interview-session { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; margin-top: 28px; padding: clamp(25px, 5vw, 46px); box-shadow: 0 14px 38px rgba(26, 54, 48, .05); }

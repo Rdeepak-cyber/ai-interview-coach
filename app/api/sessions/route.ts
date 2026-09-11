@@ -62,3 +62,26 @@ export async function POST(request: Request) {
     return error("We could not save this interview session.", 500);
   }
 }
+
+export async function GET() {
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return error("You must be signed in to view interview sessions.", 401);
+
+    const { data, error: queryError } = await supabase
+      .from("interview_sessions")
+      .select("id, target_role, resume_profile, questions, answers, feedback_report, created_at")
+      .order("created_at", { ascending: false });
+
+    if (queryError) {
+      console.error("Session history load failed", queryError);
+      return error("We could not load your interview sessions.", 500);
+    }
+
+    return NextResponse.json({ sessions: data ?? [] });
+  } catch (caughtError) {
+    console.error("Session history load failed", caughtError);
+    return error("We could not load your interview sessions.", 500);
+  }
+}

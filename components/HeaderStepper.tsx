@@ -25,6 +25,7 @@ type HeaderStepperProps = {
   onSelectStep: (step: StepId) => void;
   canAccessStep: (step: StepId) => boolean;
   onReset?: () => void;
+  onPastSessions?: () => void;
 };
 
 export default function HeaderStepper({
@@ -32,6 +33,7 @@ export default function HeaderStepper({
   onSelectStep,
   canAccessStep,
   onReset,
+  onPastSessions,
 }: HeaderStepperProps) {
   const currentConfig = STEPS.find((s) => s.id === currentStep) ?? STEPS[0];
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -77,6 +79,11 @@ export default function HeaderStepper({
               title="Start a new interview session from scratch"
             >
               Start over
+            </button>
+          )}
+          {isAuthenticated && (
+            <button type="button" className="text-action-btn history-btn" onClick={onPastSessions ?? (() => window.location.assign("/sessions"))}>
+              Past sessions
             </button>
           )}
           {isAuthenticated && (
