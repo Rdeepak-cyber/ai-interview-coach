@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createSupabaseBrowserClient } from "../lib/supabase-browser";
+
 export type StepId = 1 | 2 | 3 | 4 | 5;
 
 type StepConfig = {
@@ -31,6 +34,20 @@ export default function HeaderStepper({
   onReset,
 }: HeaderStepperProps) {
   const currentConfig = STEPS.find((s) => s.id === currentStep) ?? STEPS[0];
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => setIsAuthenticated(Boolean(data.user)));
+  }, []);
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    window.location.assign("/login");
+  }
 
   return (
     <header className="app-header">
@@ -60,6 +77,11 @@ export default function HeaderStepper({
               title="Start a new interview session from scratch"
             >
               Start over
+            </button>
+          )}
+          {isAuthenticated && (
+            <button type="button" className="text-action-btn logout-btn" onClick={handleSignOut} disabled={isSigningOut}>
+              {isSigningOut ? "Signing out..." : "Log out"}
             </button>
           )}
         </div>

@@ -26,6 +26,8 @@ main { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 96
 .brand-title { color: var(--deep); font-size: .86rem; font-weight: 800; letter-spacing: .02em; }
 .brand-subtitle { color: var(--muted); font-size: .68rem; margin-top: 3px; }
 .header-actions { align-items: center; display: flex; gap: 18px; }
+.logout-btn { color: var(--accent); padding: 4px 0; }
+.logout-btn:hover:not(:disabled) { background: transparent; color: #b8432c; }
 .current-step-pill { align-items: center; background: var(--soft-teal); border: 1px solid #cfe0d6; color: var(--deep); display: flex; font-size: .77rem; gap: 8px; padding: 9px 12px; }
 .step-indicator-dot { background: var(--accent); border-radius: 50%; display: inline-block; height: 7px; width: 7px; }
 .stepper-nav { margin-top: 27px; }
