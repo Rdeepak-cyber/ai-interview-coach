@@ -2,6 +2,22 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; color: var(--ink); background: #f1f4ef; font-family: Arial, Helvetica, sans-serif; }
 main { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 96px; }
+.auth-page { align-items: center; display: flex; min-height: 100vh; padding: 40px 0; }
+.auth-shell { margin: 0 auto; width: min(460px, 100%); }
+.auth-brand { align-items: center; display: flex; gap: 11px; margin-bottom: 30px; }
+.auth-card { background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 4px; box-shadow: 0 18px 45px rgba(26, 54, 48, .08); padding: clamp(26px, 6vw, 44px); }
+.auth-heading h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); line-height: 1; margin: 0; }
+.auth-intro { color: var(--muted); font-size: .96rem; line-height: 1.6; margin: 16px 0 0; }
+.auth-form { display: flex; flex-direction: column; margin-top: 30px; }
+.auth-form label { color: var(--deep); font-size: .85rem; font-weight: 800; margin: 0 0 8px; }
+.auth-form input { background: #fff; border: 1px solid #aebdb7; border-radius: 2px; color: var(--ink); font: inherit; margin-bottom: 18px; padding: 13px; }
+.auth-form input:focus { border-color: #47766a; outline: 2px solid #c9ded5; outline-offset: 1px; }
+.auth-form button { margin-top: 4px; }
+.auth-message { font-size: .85rem; line-height: 1.5; margin: 0 0 16px; padding: 10px 12px; }
+.auth-error { background: #fdf5f3; border: 1px solid #f2d2cb; color: #a63526; }
+.auth-success { background: #edf7f1; border: 1px solid #b6dec6; color: #1e4532; }
+.auth-switch { border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; margin: 28px 0 0; padding-top: 22px; text-align: center; }
+.auth-switch .text-action-btn { color: var(--accent); padding: 0; }
 .app-header { border-bottom: 1px solid var(--line); margin-bottom: 78px; padding-bottom: 20px; }
 .header-top-bar { align-items: center; display: flex; justify-content: space-between; gap: 24px; }
 .brand-lockup { align-items: center; display: flex; gap: 11px; }
