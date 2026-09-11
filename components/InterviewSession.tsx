@@ -6,10 +6,12 @@ import type { FeedbackReport } from "../lib/feedback-report";
 import type { InterviewQuestion } from "../lib/interview-question";
 import { formatWordCount, type InterviewQA } from "../lib/interview-session";
 import { useVoice } from "../lib/voice";
+import type { ResumeProfile } from "../lib/resume-profile";
 
 type InterviewSessionProps = {
   questions: InterviewQuestion[];
   targetRole: string;
+  resumeProfile?: ResumeProfile;
   onComplete?: (qaPairs: InterviewQA[]) => void;
   onFeedbackGenerated?: () => void;
   onRestart?: () => void;
@@ -19,6 +21,7 @@ type InterviewSessionProps = {
 export default function InterviewSession({
   questions,
   targetRole,
+  resumeProfile,
   onComplete,
   onFeedbackGenerated,
   onRestart,
@@ -164,6 +167,24 @@ export default function InterviewSession({
       }
 
       setFeedbackReport(data.report);
+      if (resumeProfile) {
+        try {
+          const saveResponse = await fetch("/api/sessions", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              targetRole,
+              resumeProfile,
+              questions,
+              answers: latestQAPairs,
+              feedbackReport: data.report,
+            }),
+          });
+          if (!saveResponse.ok) console.error("Interview session was not saved.");
+        } catch (saveError) {
+          console.error("Interview session save failed", saveError);
+        }
+      }
       onFeedbackGenerated?.();
     } catch (caughtError) {
       setFeedbackError(caughtError instanceof Error ? caughtError.message : "Failed to generate feedback report.");

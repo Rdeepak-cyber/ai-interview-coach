@@ -382,6 +382,7 @@ export default function Home() {
           <InterviewSession
             questions={questions}
             targetRole={targetRole || "Target Role"}
+            resumeProfile={profile}
             onComplete={(qa) => setQaPairs(qa)}
             onFeedbackGenerated={() => { setIsFeedbackReady(true); setCurrentStep(5); }}
             onRestart={() => { setIsFeedbackReady(false); setCurrentStep(4); }}
