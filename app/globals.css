@@ -354,4 +354,5 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .live-answer-preview label { color: var(--deep); display: block; font-size: .86rem; font-weight: 800; margin-bottom: 9px; }
 .live-preview-footer { align-items: center; display: flex; gap: 20px; justify-content: space-between; margin-top: 12px; }
 .live-preview-footer p { color: var(--muted); font-size: .83rem; margin: 0; }
+.live-shell-actions { align-items: center; display: flex; gap: 14px; justify-content: space-between; margin-top: 18px; }
 @media (max-width: 600px) { .mode-options, .live-stage { grid-template-columns: 1fr; } .mode-option { min-height: 260px; } .live-session-header { flex-direction: column; } .live-timer { align-self: flex-start; } .live-preview-footer { align-items: stretch; flex-direction: column-reverse; } }

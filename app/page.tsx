@@ -417,7 +417,7 @@ export default function Home() {
           />
         )}
         {interviewMode === "adaptive" && currentStep === 4 && (
-          <LiveInterviewShell targetRole={targetRole} onBack={() => { setInterviewMode(null); setCurrentStep(3); }} />
+          <LiveInterviewShell targetRole={targetRole} profile={profile} onBack={() => { setInterviewMode(null); setCurrentStep(3); }} />
         )}
         </>
       )}
