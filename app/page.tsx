@@ -2,6 +2,8 @@
 
 import { ChangeEvent, DragEvent, FormEvent, useRef, useState } from "react";
 import InterviewSession from "../components/InterviewSession";
+import InterviewModeSelector, { type InterviewMode } from "../components/InterviewModeSelector";
+import LiveInterviewShell from "../components/LiveInterviewShell";
 import HeaderStepper, { type StepId } from "../components/HeaderStepper";
 import type { InterviewQuestion } from "../lib/interview-question";
 import type { InterviewQA } from "../lib/interview-session";
@@ -33,6 +35,7 @@ export default function Home() {
   const [isDragActive, setIsDragActive] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [isFeedbackReady, setIsFeedbackReady] = useState(false);
+  const [interviewMode, setInterviewMode] = useState<InterviewMode | null>(null);
 
   function chooseFile(nextFile: File | null) {
     setError(null);
@@ -44,6 +47,7 @@ export default function Home() {
     setIsInterviewStarted(false);
     setQaPairs(null);
     setIsFeedbackReady(false);
+    setInterviewMode(null);
 
     if (!nextFile) {
       setFile(null);
@@ -124,6 +128,7 @@ export default function Home() {
     setIsInterviewStarted(false);
     setQaPairs(null);
     setIsFeedbackReady(false);
+    setInterviewMode(null);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -138,6 +143,7 @@ export default function Home() {
     setIsInterviewStarted(false);
     setQaPairs(null);
     setIsFeedbackReady(false);
+    setInterviewMode(null);
 
     try {
       const response = await fetch("/api/resume/understand", {
@@ -156,9 +162,12 @@ export default function Home() {
     }
   }
 
-  async function generateQuestions(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function generateQuestions() {
     if (!profile) return;
+    if (targetRole.trim().length < 2) {
+      setQuestionError("Enter a target role before choosing an interview format.");
+      return;
+    }
 
     setIsGeneratingQuestions(true);
     setQuestionError(null);
@@ -175,11 +184,29 @@ export default function Home() {
       const data = (await response.json()) as { questions?: InterviewQuestion[]; error?: string };
       if (!response.ok || !data.questions) throw new Error(data.error || "We could not generate questions.");
       setQuestions(data.questions);
+      setInterviewMode("fixed");
     } catch (caughtError) {
       setQuestionError(caughtError instanceof Error ? caughtError.message : "We could not generate questions.");
     } finally {
       setIsGeneratingQuestions(false);
     }
+  }
+
+  function chooseInterviewMode(mode: InterviewMode) {
+    if (mode === "fixed") {
+      void generateQuestions();
+      return;
+    }
+    if (targetRole.trim().length < 2) {
+      setQuestionError("Enter a target role before choosing an interview format.");
+      return;
+    }
+    setQuestionError(null);
+    setInterviewMode("adaptive");
+    setIsInterviewStarted(false);
+    setQaPairs(null);
+    setIsFeedbackReady(false);
+    setCurrentStep(4);
   }
 
   return (
@@ -190,7 +217,7 @@ export default function Home() {
         canAccessStep={(step) => {
           if (step === 1) return true;
           if (step === 2 || step === 3) return Boolean(profile);
-          if (step === 4) return Boolean(questions);
+          if (step === 4) return Boolean(questions) || interviewMode === "adaptive";
           return isFeedbackReady;
         }}
       />
@@ -322,16 +349,16 @@ export default function Home() {
             </div>
             <span className="step-screen-number">03</span>
           </div>
-          <form onSubmit={generateQuestions}>
+          <form onSubmit={(event) => event.preventDefault()}>
             <label htmlFor="target-role">Target role or job title</label>
             <div className="role-control">
-              <input id="target-role" value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="e.g. Senior Frontend Engineer" required minLength={2} maxLength={150} />
-              <button type="submit" disabled={isGeneratingQuestions} aria-busy={isGeneratingQuestions}>{isGeneratingQuestions ? <><span className="button-spinner" aria-hidden="true" /> Building your set...</> : "Generate questions"}</button>
+              <input id="target-role" value={targetRole} onChange={(event) => { setTargetRole(event.target.value); setQuestions(null); setInterviewMode(null); }} placeholder="e.g. Senior Frontend Engineer" required minLength={2} maxLength={150} />
             </div>
           </form>
+          <InterviewModeSelector targetRole={targetRole} isLoading={isGeneratingQuestions} onSelect={chooseInterviewMode} />
           {questionError && <p className="message error" role="alert">{questionError}</p>}
         </section>}
-        {questions && currentStep === 3 && (
+        {questions && interviewMode === "fixed" && currentStep === 3 && (
           <>
             <section className="question-list" aria-labelledby="question-list-title">
               <div className="result-heading">
@@ -378,7 +405,7 @@ export default function Home() {
 
           </>
         )}
-        {questions && isInterviewStarted && currentStep >= 4 && (
+        {questions && interviewMode === "fixed" && isInterviewStarted && currentStep >= 4 && (
           <InterviewSession
             questions={questions}
             targetRole={targetRole || "Target Role"}
@@ -388,6 +415,9 @@ export default function Home() {
             onRestart={() => { setIsFeedbackReady(false); setCurrentStep(4); }}
             showFeedbackOnly={currentStep === 5}
           />
+        )}
+        {interviewMode === "adaptive" && currentStep === 4 && (
+          <LiveInterviewShell targetRole={targetRole} onBack={() => { setInterviewMode(null); setCurrentStep(3); }} />
         )}
         </>
       )}
