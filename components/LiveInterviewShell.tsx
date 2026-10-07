@@ -5,9 +5,10 @@ import type { AdaptiveInterviewTurn } from "../lib/adaptive-interview";
 import type { InterviewQuestion } from "../lib/interview-question";
 import type { ResumeProfile } from "../lib/resume-profile";
 import type { RoleMatch } from "../lib/role-match";
+import { ROLE_MATCH_THRESHOLDS } from "../lib/role-match";
 import { useVoice } from "../lib/voice";
 
-type LiveInterviewShellProps = { targetRole: string; profile: ResumeProfile; onBack: () => void };
+type LiveInterviewShellProps = { targetRole: string; profile: ResumeProfile; onBack: (clearRole?: boolean) => void };
 
 export default function LiveInterviewShell({ targetRole, profile, onBack }: LiveInterviewShellProps) {
   const [history, setHistory] = useState<AdaptiveInterviewTurn[]>([]);
@@ -17,6 +18,7 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [isCheckingMatch, setIsCheckingMatch] = useState(false);
   const [matchGate, setMatchGate] = useState<RoleMatch | null>(null);
+  const [matchToken, setMatchToken] = useState<string | null>(null);
   const [matchNotice, setMatchNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAnswerFocused, setIsAnswerFocused] = useState(false);
@@ -47,11 +49,21 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
     });
   }
 
-  async function requestNextQuestion(nextHistory: AdaptiveInterviewTurn[], autoSpeak = !isMuted) {
+  async function requestNextQuestion(nextHistory: AdaptiveInterviewTurn[], autoSpeak = !isMuted, tokenOverride?: string | null) {
     setIsLoadingQuestion(true);
     setError(null);
     try {
-      const response = await fetch("/api/interview/adaptive/next", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ role: targetRole, profile, history: nextHistory }) });
+      const activeToken = tokenOverride !== undefined ? tokenOverride : matchToken;
+      const response = await fetch("/api/interview/adaptive/next", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          role: targetRole,
+          profile,
+          history: nextHistory,
+          token: activeToken ?? undefined
+        })
+      });
       const data = (await response.json()) as { question?: InterviewQuestion; error?: string };
       if (!response.ok || !data.question) throw new Error(data.error || "We couldn't create the next question.");
       setHistory(nextHistory);
@@ -76,24 +88,29 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ role: targetRole, profile })
       });
-      const data = (await response.json()) as { match?: RoleMatch; error?: string };
+      const data = (await response.json()) as { match?: RoleMatch | null; token?: string; error?: string };
       if (!response.ok || !data.match) {
         setMatchNotice("Could not verify role match right now. Starting your interview directly.");
         setIsCheckingMatch(false);
-        void requestNextQuestion([]);
+        const token = data.token ?? null;
+        setMatchToken(token);
+        void requestNextQuestion([], !isMuted, token);
         return;
       }
-      if (data.match.matchPercent >= 70) {
-        setIsCheckingMatch(false);
-        void requestNextQuestion([]);
+      const match = data.match;
+      const token = data.token ?? null;
+      setMatchToken(token);
+      setIsCheckingMatch(false);
+
+      if (match.matchPercent >= ROLE_MATCH_THRESHOLDS.WARN) {
+        void requestNextQuestion([], !isMuted, token);
       } else {
-        setIsCheckingMatch(false);
-        setMatchGate(data.match);
+        setMatchGate(match);
       }
     } catch {
       setMatchNotice("Could not verify role match right now. Starting your interview directly.");
       setIsCheckingMatch(false);
-      void requestNextQuestion([]);
+      void requestNextQuestion([], !isMuted, null);
     }
   }
 
@@ -114,6 +131,7 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
     setIsMuted(false);
     setIsCheckingMatch(false);
     setMatchGate(null);
+    setMatchToken(null);
     setMatchNotice(null);
   }
 
@@ -121,7 +139,7 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
     <section className="live-interview-shell" aria-labelledby="live-interview-title">
       <div className="live-session-header">
         <div><p className="eyebrow">LIVE ADAPTIVE INTERVIEW</p><h2 id="live-interview-title">Meet your AI interviewer</h2><p className="screen-intro">Each follow-up is generated from your profile, role, and every answer you’ve given so far.</p></div>
-        <div className="live-timer" aria-label="Live interview timing guidance"><span aria-hidden="true">◷</span> Live <small>timing guidance in Phase D</small></div>
+        <div className="live-timer" aria-label="Live adaptive interview session"><span aria-hidden="true">⏱</span> Live session <small>~10 min</small></div>
       </div>
 
       <div className="live-stage">
@@ -132,25 +150,60 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
           ) : isCheckingMatch ? (
             <><p className="eyebrow">ROLE FIT EVALUATION</p><h3><span className="button-spinner" aria-hidden="true" /> Checking role fit…</h3><p className="live-start-note">Analyzing how your background aligns with &ldquo;{targetRole}&rdquo; before starting.</p></>
           ) : matchGate ? (
-            <>
-              <p className="eyebrow">ROLE FIT: {matchGate.matchPercent}% MATCH</p>
-              <h3>Role alignment notice</h3>
-              <p className="live-start-note">{matchGate.reason}</p>
-              {matchGate.missingSkills.length > 0 && (
-                <div className="match-gate-skills">
-                  <p className="match-skills-label">Missing competencies to be aware of:</p>
-                  <div className="chips">
-                    {matchGate.missingSkills.map((skill, index) => (
-                      <span key={index}>{skill}</span>
-                    ))}
+            matchGate.matchPercent < ROLE_MATCH_THRESHOLDS.HARD_BLOCK ? (
+              <div className="match-block-box">
+                <p className="eyebrow hard-block-eyebrow">ROLE FIT: {matchGate.matchPercent}% MATCH</p>
+                <h3>Role fit too low for this interview</h3>
+                <p className="live-start-note">{matchGate.reason}</p>
+                {matchGate.missingSkills.length > 0 && (
+                  <div className="match-gate-skills">
+                    <p className="match-skills-label">Missing core competencies:</p>
+                    <div className="chips">
+                      {matchGate.missingSkills.map((skill, index) => (
+                        <span key={index}>{skill}</span>
+                      ))}
+                    </div>
                   </div>
+                )}
+                <div className="match-gate-actions">
+                  <button type="button" className="match-block-btn" onClick={() => onBack(true)}>
+                    Choose a different role
+                  </button>
                 </div>
-              )}
-              <div className="match-gate-actions">
-                <button type="button" className="secondary match-change-btn" onClick={onBack}>Change role</button>
-                <button type="button" onClick={() => { setMatchGate(null); void requestNextQuestion([]); }}>Continue anyway</button>
               </div>
-            </>
+            ) : (
+              <>
+                <p className="eyebrow">ROLE FIT: {matchGate.matchPercent}% MATCH</p>
+                <h3>Role alignment notice</h3>
+                <p className="live-start-note">{matchGate.reason}</p>
+                {matchGate.missingSkills.length > 0 && (
+                  <div className="match-gate-skills">
+                    <p className="match-skills-label">Missing competencies to be aware of:</p>
+                    <div className="chips">
+                      {matchGate.missingSkills.map((skill, index) => (
+                        <span key={index}>{skill}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="match-gate-actions">
+                  <button type="button" className="secondary match-change-btn" onClick={() => onBack(false)}>
+                    Change role
+                  </button>
+                  <button
+                    type="button"
+                    className="match-continue-btn"
+                    onClick={() => {
+                      const token = matchToken;
+                      setMatchGate(null);
+                      void requestNextQuestion([], !isMuted, token);
+                    }}
+                  >
+                    Continue anyway
+                  </button>
+                </div>
+              </>
+            )
           ) : currentQuestion ? (
             <>
               <p className="eyebrow">QUESTION {questionNumber} / LIVE</p>
@@ -189,7 +242,7 @@ export default function LiveInterviewShell({ targetRole, profile, onBack }: Live
       </div>}
 
       {error && <p className="message error" role="alert">{error}</p>}
-      <div className="live-shell-actions"><button type="button" className="secondary" onClick={onBack}>Back to mode selection</button>{(history.length > 0 || currentQuestion) && <button type="button" className="text-action-btn" onClick={resetLiveInterview}>Restart live interview</button>}</div>
+      <div className="live-shell-actions"><button type="button" className="secondary" onClick={() => onBack()}>Back to mode selection</button>{(history.length > 0 || currentQuestion) && <button type="button" className="text-action-btn" onClick={resetLiveInterview}>Restart live interview</button>}</div>
     </section>
   );
 }

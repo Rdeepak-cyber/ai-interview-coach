@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { adaptiveNextQuestionSchema, isAdaptiveHistory, isAdaptiveQuestion } from "../../../../../lib/adaptive-interview";
 import { isResumeProfile } from "../../../../../lib/resume-profile";
+import { verifyRoleMatchToken } from "../../../../../lib/role-match-token";
+import { ROLE_MATCH_THRESHOLDS } from "../../../../../lib/role-match";
 
 export const runtime = "nodejs";
 const RESPONSE_SCHEMA_NAME = "adaptive_next_question";
@@ -14,9 +16,17 @@ export async function POST(request: Request) {
     const role = typeof body === "object" && body !== null && "role" in body ? (body as { role?: unknown }).role : undefined;
     const profile = typeof body === "object" && body !== null && "profile" in body ? (body as { profile?: unknown }).profile : undefined;
     const history = typeof body === "object" && body !== null && "history" in body ? (body as { history?: unknown }).history : undefined;
+    const token = typeof body === "object" && body !== null && "token" in body ? (body as { token?: unknown }).token : undefined;
     if (typeof role !== "string" || role.trim().length < 2 || role.trim().length > 150) return error("Enter a target role between 2 and 150 characters.", 400);
     if (!isResumeProfile(profile)) return error("A valid resume profile is required before starting a live interview.", 400);
     if (!isAdaptiveHistory(history)) return error("The live interview history is invalid.", 400);
+
+    if (history.length === 0) {
+      const verification = verifyRoleMatchToken(token, role);
+      if (!verification.valid || (verification.matchPercent !== undefined && verification.matchPercent < ROLE_MATCH_THRESHOLDS.HARD_BLOCK)) {
+        return error("This role has low alignment with your resume and cannot be used for a live interview.", 403);
+      }
+    }
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },

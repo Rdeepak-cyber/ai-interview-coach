@@ -4,6 +4,11 @@ export type RoleMatch = {
   missingSkills: string[];
 };
 
+export const ROLE_MATCH_THRESHOLDS = {
+  HARD_BLOCK: 50,
+  WARN: 70,
+} as const;
+
 export function isRoleMatch(value: unknown): value is RoleMatch {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const { matchPercent, reason, missingSkills } = value as Record<string, unknown>;

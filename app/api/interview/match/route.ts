@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isRoleMatch, roleMatchSchema } from "../../../../lib/role-match";
+import { isRoleMatch, roleMatchSchema, ROLE_MATCH_THRESHOLDS } from "../../../../lib/role-match";
+import { createRoleMatchToken } from "../../../../lib/role-match-token";
 import { isResumeProfile } from "../../../../lib/resume-profile";
 
 export const runtime = "nodejs";
@@ -8,7 +9,14 @@ const error = (message: string, status: number) => NextResponse.json({ error: me
 
 export async function POST(request: Request) {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return error("Groq is not configured. Add GROQ_API_KEY to your .env.local file and restart the app.", 503);
+  if (!apiKey) {
+    // Fail open with token if Groq is unconfigured
+    return NextResponse.json({
+      match: null,
+      token: createRoleMatchToken("general", ROLE_MATCH_THRESHOLDS.WARN),
+      error: "Groq is not configured."
+    });
+  }
 
   try {
     const body: unknown = await request.json();
@@ -26,7 +34,10 @@ export async function POST(request: Request) {
             model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
             max_tokens: 500,
             messages: [
-              { role: "system", content: "Assess the candidate's fit for the target role based only on the structured resume profile. Be realistic but constructive. The percentage reflects transferable experience and relevant skills, not only exact job-title matches. Missing skills must be concrete, role-relevant, and limited to the five most important." },
+              {
+                role: "system",
+                content: "Assess the candidate's fit for the target role based only on the structured resume profile. Address the candidate directly in the second person ('you', 'your resume', 'your background') rather than 'the candidate'. Be realistic but constructive. The percentage reflects transferable experience and relevant skills, not only exact job-title matches. Missing skills must be concrete, role-relevant, and limited to the five most important."
+              },
               { role: "user", content: `Target role: ${role.trim()}\n\nStructured resume profile:\n${JSON.stringify(profile)}` }
             ],
             response_format: { type: "json_schema", json_schema: { name: "role_match", strict: true, schema: roleMatchSchema } }
@@ -45,13 +56,22 @@ export async function POST(request: Request) {
             ...parsed,
             matchPercent: Math.round(Math.min(100, Math.max(0, parsed.matchPercent)))
           };
-          return NextResponse.json({ match: clamped });
+          const token = clamped.matchPercent >= ROLE_MATCH_THRESHOLDS.HARD_BLOCK
+            ? createRoleMatchToken(role, clamped.matchPercent)
+            : undefined;
+          return NextResponse.json({ match: clamped, token });
         }
       } catch (err) {
         console.warn(`Groq role match parse/fetch failure on attempt ${attempt + 1}`, err);
       }
     }
-    return error("Groq returned an invalid role-fit result. Please continue without the check.", 502);
+    // Fail-open response with clearance token if Groq fails
+    const failOpenToken = createRoleMatchToken(role, ROLE_MATCH_THRESHOLDS.WARN);
+    return NextResponse.json({
+      match: null,
+      token: failOpenToken,
+      error: "Groq returned an invalid role-fit result."
+    });
   } catch (caughtError) {
     console.error("Role match check failed", caughtError);
     return error("We couldn't check role fit right now.", 500);

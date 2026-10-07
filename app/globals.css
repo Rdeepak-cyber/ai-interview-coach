@@ -368,6 +368,12 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .match-gate-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
 .match-change-btn { background: rgba(255, 255, 255, .12) !important; border: 1px solid rgba(181, 227, 206, .45) !important; color: #fff !important; }
 .match-change-btn:hover { background: rgba(255, 255, 255, .22) !important; }
+.match-continue-btn { background: var(--accent) !important; border: 1px solid var(--accent) !important; box-shadow: 0 2px 9px rgba(236, 107, 72, .35); color: #fff !important; }
+.match-continue-btn:hover { background: #d75635 !important; border-color: #d75635 !important; }
+.match-block-btn { background: #ffffff !important; border: 1px solid #ffffff !important; color: var(--deep) !important; font-weight: 800 !important; }
+.match-block-btn:hover { background: #e3ede7 !important; border-color: #e3ede7 !important; }
+.hard-block-eyebrow { color: #f8967e !important; }
 .match-notice-banner { background: #edf7f1; border: 1px solid #b6dec6; color: #1e4532; font-size: .88rem; margin-top: 18px; padding: 12px 16px; border-radius: 2px; }
 @media (max-width: 600px) { .mode-options, .live-stage, .live-input-mode-picker { grid-template-columns: 1fr; } .mode-option { min-height: 260px; } .live-session-header { flex-direction: column; } .live-timer { align-self: flex-start; } .live-preview-footer { align-items: stretch; flex-direction: column-reverse; } }
+
 
