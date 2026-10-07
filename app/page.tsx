@@ -416,7 +416,7 @@ export default function Home() {
             showFeedbackOnly={currentStep === 5}
           />
         )}
-        {interviewMode === "adaptive" && currentStep === 4 && (
+        {interviewMode === "adaptive" && currentStep >= 4 && (
           <LiveInterviewShell
             targetRole={targetRole}
             profile={profile}
@@ -430,6 +430,11 @@ export default function Home() {
                 const input = document.getElementById("target-role") as HTMLInputElement | null;
                 input?.focus();
               }, 50);
+            }}
+            onComplete={(qa) => setQaPairs(qa)}
+            onFeedbackGenerated={() => {
+              setIsFeedbackReady(true);
+              setCurrentStep(5);
             }}
           />
         )}
