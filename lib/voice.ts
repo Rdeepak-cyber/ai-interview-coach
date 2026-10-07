@@ -27,6 +27,7 @@ export function useVoice({
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const baseTextRef = useRef<string>("");
+  const speechRunRef = useRef(0);
 
   useEffect(() => {
     setRecognitionSupported(isSpeechRecognitionSupported());
@@ -144,9 +145,14 @@ export function useVoice({
     setIsListening(false);
   }, []);
 
-  const speakText = useCallback((text: string) => {
-    if (!isSpeechSynthesisSupported()) return;
+  const speakText = useCallback((text: string, options?: { onEnd?: () => void; onError?: () => void }) => {
+    if (!isSpeechSynthesisSupported()) {
+      setSpeechError("Text-to-speech is not supported in this browser. You can still read and type your answer.");
+      options?.onError?.();
+      return false;
+    }
 
+    const speechRun = ++speechRunRef.current;
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -163,15 +169,28 @@ export function useVoice({
       utterance.voice = preferredVoice;
     }
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onstart = () => {
+      if (speechRun === speechRunRef.current) setIsSpeaking(true);
+    };
+    utterance.onend = () => {
+      if (speechRun !== speechRunRef.current) return;
+      setIsSpeaking(false);
+      options?.onEnd?.();
+    };
+    utterance.onerror = () => {
+      if (speechRun !== speechRunRef.current) return;
+      setIsSpeaking(false);
+      setSpeechError("Question audio could not be played. You can read the question and type your answer instead.");
+      options?.onError?.();
+    };
 
     window.speechSynthesis.speak(utterance);
+    return true;
   }, []);
 
   const stopSpeaking = useCallback(() => {
     if (!isSpeechSynthesisSupported()) return;
+    speechRunRef.current += 1;
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
   }, []);
