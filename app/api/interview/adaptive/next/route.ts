@@ -48,7 +48,8 @@ export async function POST(request: Request) {
       return NextResponse.json({
         action: "wrap_up",
         closingMessage:
-          "Thank you for completing this comprehensive session! We've covered plenty of ground across your background. Let's see your detailed feedback report."
+          "Thank you for completing this comprehensive session! We've covered plenty of ground across your background. Let's see your detailed feedback report.",
+        question: null
       });
     }
 
@@ -71,9 +72,9 @@ export async function POST(request: Request) {
                   `- Soft duration target: ~10 minutes (600 seconds).\n` +
                   `- Current session status: ${Math.round(elapsedSeconds)} seconds elapsed (~${elapsedMinutes} minutes), with ${history.length} completed question${history.length === 1 ? "" : "s"}.\n` +
                   `- DO NOT wrap up before at least 4 questions have been completed. If history has fewer than 4 questions, you MUST return action: "continue".\n` +
-                  `- If at least 4 questions have been answered AND either elapsed time is around/past 10 minutes (~600s) or you have gained sufficient signal across core competencies for the role, return action: "wrap_up" with a warm, natural closingMessage (1-3 sentences) thanking the candidate.\n` +
-                  `- When returning action: "continue", return exactly one concise, role-relevant question (with type and difficulty). Link candidate background and transferable skills to the target role. Never repeat or closely paraphrase a previous question.\n` +
-                  `- When returning action: "wrap_up", return closingMessage and omit question.`
+                  `- If at least 4 questions have been answered AND either elapsed time is around/past 10 minutes (~600s) or you have gained sufficient signal across core competencies for the role, return action: "wrap_up" with a warm, natural closingMessage (1-3 sentences) thanking the candidate, and set question to null.\n` +
+                  `- When returning action: "continue", return exactly one concise, role-relevant question (with type and difficulty) and set closingMessage to null. Link candidate background and transferable skills to the target role. Never repeat or closely paraphrase a previous question.\n` +
+                  `- When returning action: "wrap_up", return closingMessage and set question to null.`
               },
               {
                 role: "user",
@@ -112,7 +113,11 @@ export async function POST(request: Request) {
             console.warn("Groq attempted to wrap up before 4 questions; retrying for a question.");
             continue;
           }
-          return NextResponse.json(result);
+          return NextResponse.json({
+            action: "wrap_up",
+            closingMessage: result.closingMessage,
+            question: null
+          });
         }
 
         if (result.action === "continue") {
@@ -121,7 +126,11 @@ export async function POST(request: Request) {
             console.warn("Groq generated a duplicate or highly similar question; retrying.");
             continue;
           }
-          return NextResponse.json(result);
+          return NextResponse.json({
+            action: "continue",
+            question: result.question,
+            closingMessage: null
+          });
         }
       } catch (err) {
         console.warn(`Groq adaptive next error on attempt ${attempt + 1}`, err);
@@ -132,7 +141,8 @@ export async function POST(request: Request) {
     if (history.length >= 4) {
       return NextResponse.json({
         action: "wrap_up",
-        closingMessage: "Thank you for sharing your experience. We've gathered enough responses to build your feedback report."
+        closingMessage: "Thank you for sharing your experience. We've gathered enough responses to build your feedback report.",
+        question: null
       });
     }
 

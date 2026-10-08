@@ -7,10 +7,12 @@ export type AdaptiveNextResponse =
   | {
       action: "continue";
       question: InterviewQuestion;
+      closingMessage?: string | null;
     }
   | {
       action: "wrap_up";
       closingMessage: string;
+      question?: InterviewQuestion | null;
     };
 
 export function isAdaptiveHistory(value: unknown): value is AdaptiveInterviewTurn[] {
@@ -50,10 +52,15 @@ export function isAdaptiveNextResponse(value: unknown): value is AdaptiveNextRes
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const { action, question, closingMessage } = value as Record<string, unknown>;
   if (action === "continue") {
-    return isAdaptiveQuestion(question);
+    return isAdaptiveQuestion(question) && (closingMessage === null || closingMessage === undefined);
   }
   if (action === "wrap_up") {
-    return typeof closingMessage === "string" && closingMessage.trim().length >= 5 && closingMessage.length <= 500;
+    return (
+      typeof closingMessage === "string" &&
+      closingMessage.trim().length >= 5 &&
+      closingMessage.length <= 500 &&
+      (question === null || question === undefined)
+    );
   }
   return false;
 }
@@ -61,11 +68,11 @@ export function isAdaptiveNextResponse(value: unknown): value is AdaptiveNextRes
 export const adaptiveNextSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["action"],
+  required: ["action", "question", "closingMessage"],
   properties: {
     action: { type: "string", enum: ["continue", "wrap_up"] },
     question: {
-      type: "object",
+      type: ["object", "null"],
       additionalProperties: false,
       required: ["question", "type", "difficulty"],
       properties: {
@@ -75,9 +82,7 @@ export const adaptiveNextSchema = {
       }
     },
     closingMessage: {
-      type: "string",
-      minLength: 5,
-      maxLength: 500
+      type: ["string", "null"]
     }
   }
 } as const;
