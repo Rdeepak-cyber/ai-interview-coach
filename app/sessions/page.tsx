@@ -9,6 +9,7 @@ import type { ResumeProfile } from "../../lib/resume-profile";
 type SavedSession = {
   id: string;
   target_role: string;
+  mode?: "fixed" | "adaptive";
   resume_profile: ResumeProfile;
   questions: unknown;
   answers: InterviewQA[];
@@ -73,7 +74,12 @@ export default function SessionsPage() {
               {sessions.map((session) => (
                 <button type="button" className="session-history-item" key={session.id} onClick={() => setSelectedSession(session)}>
                   <span className="session-history-date">{new Date(session.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
-                  <span className="session-history-role">{session.target_role}</span>
+                  <div className="session-history-role-wrap">
+                    <span className="session-history-role">{session.target_role}</span>
+                    <span className={`session-mode-badge ${session.mode === "adaptive" ? "mode-adaptive" : "mode-fixed"}`}>
+                      {session.mode === "adaptive" ? "Live Adaptive" : "Practice Set"}
+                    </span>
+                  </div>
                   <span className="session-history-arrow" aria-hidden="true">→</span>
                 </button>
               ))}

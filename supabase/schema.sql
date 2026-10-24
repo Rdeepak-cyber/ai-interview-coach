@@ -1,6 +1,7 @@
 create table if not exists public.interview_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  mode text not null default 'fixed' check (mode in ('fixed', 'adaptive')),
   target_role text not null check (char_length(target_role) between 2 and 150),
   resume_profile jsonb not null,
   questions jsonb not null,

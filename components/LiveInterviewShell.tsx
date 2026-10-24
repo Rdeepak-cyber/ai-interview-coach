@@ -210,15 +210,21 @@ export default function LiveInterviewShell({
 
       if (profile) {
         try {
+          const cleanQuestions: InterviewQuestion[] = qaList.map((turn) => ({
+            question: turn.question,
+            type: turn.type,
+            difficulty: turn.difficulty,
+          }));
           await fetch("/api/sessions", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               targetRole,
               resumeProfile: profile,
-              questions: qaList,
+              questions: cleanQuestions,
               answers: qaList,
-              feedbackReport: data.report
+              feedbackReport: data.report,
+              mode: "adaptive"
             })
           });
         } catch (saveError) {
@@ -517,4 +523,3 @@ export default function LiveInterviewShell({
     </section>
   );
 }
-
