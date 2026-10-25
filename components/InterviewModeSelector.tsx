@@ -30,7 +30,7 @@ export default function InterviewModeSelector({ targetRole, isLoading = false, o
           <span className="mode-icon live" aria-hidden="true">◉</span>
           <span className="mode-label">ADAPTIVE</span>
           <h4>Live Interview</h4>
-          <p>Meet one question at a time. The interviewer will adapt each follow-up to your answers in Phase C.</p>
+          <p>Meet one question at a time. The interviewer adapts each follow-up dynamically based on your answers in real time.</p>
           <button type="button" disabled={!canChoose} onClick={() => onSelect("adaptive")}>Choose Live Interview</button>
         </article>
       </div>

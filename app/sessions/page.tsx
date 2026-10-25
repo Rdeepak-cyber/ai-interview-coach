@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import FeedbackReportView from "../../components/FeedbackReportView";
 import type { FeedbackReport } from "../../lib/feedback-report";
+import { toTitleCase } from "../../lib/format";
 import type { InterviewQA } from "../../lib/interview-session";
 import type { ResumeProfile } from "../../lib/resume-profile";
 
@@ -75,7 +76,7 @@ export default function SessionsPage() {
                 <button type="button" className="session-history-item" key={session.id} onClick={() => setSelectedSession(session)}>
                   <span className="session-history-date">{new Date(session.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
                   <div className="session-history-role-wrap">
-                    <span className="session-history-role">{session.target_role}</span>
+                    <span className="session-history-role">{toTitleCase(session.target_role)}</span>
                     <span className={`session-mode-badge ${session.mode === "adaptive" ? "mode-adaptive" : "mode-fixed"}`}>
                       {session.mode === "adaptive" ? "Live Adaptive" : "Practice Set"}
                     </span>

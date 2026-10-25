@@ -49,11 +49,21 @@ export async function POST(request: Request) {
       return error("A valid list of interview questions and answers is required.", 400);
     }
 
+    const totalAnswerWords = qaPairs.reduce((acc, qa) => {
+      const words = qa.answer.trim().split(/\s+/).filter(Boolean).length;
+      return acc + words;
+    }, 0);
+    const isVeryShortSession = qaPairs.length <= 2 || totalAnswerWords < 30;
+
     const formattedQAs = qaPairs
       .map((qa, i) => {
         return `[Question ${i + 1}] (${qa.type} - ${qa.difficulty})\nQuestion: ${qa.question}\nCandidate Answer: ${qa.answer.trim() || "[No answer provided]"}`;
       })
       .join("\n\n---\n\n");
+
+    const shortSessionUserNote = isVeryShortSession
+      ? "\n\nNote: The candidate provided only one or two brief answers (very short session). Keep the evaluation gentle and supportive, noting in the overallSummary that because they gave only one short answer (or a very brief sample), this feedback is limited, but provide encouraging and constructive pointers."
+      : "";
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -77,11 +87,13 @@ export async function POST(request: Request) {
               "   - strengths: What the candidate did well in this specific response.\n" +
               "   - weaknesses: Weak spots, vague explanations, missing technical depth, or omissions.\n" +
               "   - suggestions: Concrete, actionable advice on how to improve this exact answer.\n" +
-              "   - starAssessment: If the question type is 'behavioral', set applicable: true and rigorously evaluate Situation, Task, Action, and Result, with specific feedback. If not behavioral, set applicable: false and use 'N/A' for situation, task, action, and result.",
+              "   - starAssessment: If the question type is 'behavioral', set applicable: true and rigorously evaluate Situation, Task, Action, and Result, with specific feedback. If not behavioral, set applicable: false and use 'N/A' for situation, task, action, and result.\n\n" +
+              "Guidance for Short or Incomplete Interviews:\n" +
+              "If the candidate provided only one or two short answers (or gave a very brief response before finishing), make the feedback noticeably gentler and supportive. In the overallSummary, gently explain that because they gave only one short answer (or a very limited sample), this feedback is limited, rather than judging them harshly. Highlight positive potential and encourage a fuller practice session.",
           },
           {
             role: "user",
-            content: `Target Role: ${role.trim()}\n\nInterview Questions & Candidate Answers:\n\n${formattedQAs}`,
+            content: `Target Role: ${role.trim()}${shortSessionUserNote}\n\nInterview Questions & Candidate Answers:\n\n${formattedQAs}`,
           },
         ],
         response_format: {
@@ -132,4 +144,3 @@ export async function POST(request: Request) {
     return error("We couldn't generate the feedback report. Please try again.", 500);
   }
 }
-

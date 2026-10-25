@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toTitleCase } from "../lib/format";
 import type { FeedbackReport } from "../lib/feedback-report";
 import type { InterviewQA } from "../lib/interview-session";
 
@@ -53,7 +54,7 @@ export default function FeedbackReportView({
 
       <h2 id="feedback-report-title">Interview Feedback Report</h2>
       <p className="helper">
-        Comprehensive evaluation for <strong>{targetRole}</strong> powered by Groq.
+        Comprehensive evaluation for <strong>{toTitleCase(targetRole)}</strong> powered by Groq.
       </p>
 
       {/* Overall Executive Summary Card */}
