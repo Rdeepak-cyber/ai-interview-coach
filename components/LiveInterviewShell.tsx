@@ -181,6 +181,7 @@ export default function LiveInterviewShell({
     if (!currentQuestion || !answer.trim()) return;
     voice.stopListening();
     voice.stopSpeaking();
+    voice.resetTranscript();
     void requestNextQuestion([...history, { ...currentQuestion, answer: answer.trim() }]);
   }
 
@@ -485,7 +486,14 @@ export default function LiveInterviewShell({
           {voice.isListening && (
             <div className="voice-live-banner" role="status">
               <span className="pulsing-mic-badge" aria-hidden="true">LIVE</span>
-              <span>Listening to your answer… You can still edit the text below.</span>
+              <div className="voice-live-banner-content">
+                <span>Listening to your answer… You can still edit the text below.</span>
+                {voice.interimText && (
+                  <p className="voice-interim-preview">
+                    Hearing: <em>&ldquo;{voice.interimText}&rdquo;</em>
+                  </p>
+                )}
+              </div>
             </div>
           )}
           {voice.speechError && <p className="voice-error-text" role="alert">{voice.speechError}</p>}

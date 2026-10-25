@@ -67,6 +67,7 @@ export default function InterviewSession({
     if (!hasAnswer) return;
     voice.stopListening();
     voice.stopSpeaking();
+    voice.resetTranscript();
 
     if (isLastQuestion) {
       finishInterview();
@@ -79,6 +80,7 @@ export default function InterviewSession({
     if (currentIndex > 0) {
       voice.stopListening();
       voice.stopSpeaking();
+      voice.resetTranscript();
       setCurrentIndex((prev) => prev - 1);
     }
   }
@@ -86,6 +88,7 @@ export default function InterviewSession({
   function handleSkip() {
     voice.stopListening();
     voice.stopSpeaking();
+    voice.resetTranscript();
 
     setAnswers((prev) => ({
       ...prev,
@@ -489,7 +492,14 @@ export default function InterviewSession({
           {voice.isListening && (
             <div className="voice-live-banner" role="status" aria-live="polite">
               <span className="pulsing-mic-badge" aria-hidden="true">🔴 LIVE</span>
-              <span>Listening to your microphone... Speak clearly. Your words are added to the answer field below in real time.</span>
+              <div className="voice-live-banner-content">
+                <span>Listening to your microphone... Speak clearly. Your words are added to the answer field below in real time.</span>
+                {voice.interimText && (
+                  <p className="voice-interim-preview">
+                    Hearing: <em>&ldquo;{voice.interimText}&rdquo;</em>
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

@@ -73,9 +73,15 @@ export function useVoice({
   const [recognitionSupported, setRecognitionSupported] = useState(false);
   const [synthesisSupported, setSynthesisSupported] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [interimText, setInterimText] = useState("");
+
+  const getCurrentTextRef = useRef(getCurrentText);
+  getCurrentTextRef.current = getCurrentText;
+
+  const onTranscriptRef = useRef(onTranscript);
+  onTranscriptRef.current = onTranscript;
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const baseTextRef = useRef<string>("");
   const speechRunRef = useRef(0);
 
   useEffect(() => {
@@ -115,6 +121,11 @@ export function useVoice({
     };
   }, []);
 
+  const resetTranscript = useCallback(() => {
+    setInterimText("");
+    setSpeechError(null);
+  }, []);
+
   const stopSpeaking = useCallback(() => {
     speechRunRef.current += 1;
     setIsSpeaking(false);
@@ -135,6 +146,7 @@ export function useVoice({
 
   const startListening = useCallback(() => {
     setSpeechError(null);
+    setInterimText("");
 
     if (!isSpeechRecognitionSupported()) {
       setSpeechError("Speech-to-text is not supported in this browser. Chrome or Edge is recommended.");
@@ -153,10 +165,6 @@ export function useVoice({
         return;
       }
 
-      // Record current text in the textarea as base
-      const current = getCurrentText().trim();
-      baseTextRef.current = current.length > 0 ? `${current} ` : "";
-
       const recognition = new SpeechRecognitionConstructor();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -165,25 +173,34 @@ export function useVoice({
       recognition.onstart = () => {
         setIsListening(true);
         setSpeechError(null);
+        setInterimText("");
       };
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let finalTranscript = "";
-        let interimTranscript = "";
+        let finalChunk = "";
+        let currentInterim = "";
 
-        for (let i = 0; i < event.results.length; i++) {
+        // 1. Rebuild the transcript from event.results starting at event.resultIndex
+        for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
+          const text = result[0]?.transcript || "";
           if (result.isFinal) {
-            finalTranscript += result[0].transcript + " ";
+            finalChunk += text + " ";
           } else {
-            interimTranscript += result[0].transcript;
+            currentInterim += text;
           }
         }
 
-        const totalDictated = (finalTranscript + interimTranscript).trim();
-        if (totalDictated) {
-          onTranscript(`${baseTextRef.current}${totalDictated}`);
+        // 2. Add only results with isFinal === true to the stored answer text
+        const trimmedFinal = finalChunk.trim();
+        if (trimmedFinal) {
+          const currentText = getCurrentTextRef.current().trim();
+          const updated = currentText ? `${currentText} ${trimmedFinal}` : trimmedFinal;
+          onTranscriptRef.current(updated);
         }
+
+        // 3. Show the current interim text separately and never save it into the answer
+        setInterimText(currentInterim.trim());
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -201,10 +218,12 @@ export function useVoice({
         }
 
         setIsListening(false);
+        setInterimText("");
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        setInterimText("");
         recognitionRef.current = null;
       };
 
@@ -214,8 +233,9 @@ export function useVoice({
       console.error("Failed to start speech recognition", err);
       setSpeechError("Could not start microphone recording. Please try again.");
       setIsListening(false);
+      setInterimText("");
     }
-  }, [getCurrentText, onTranscript, stopSpeaking]);
+  }, [stopSpeaking]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -227,6 +247,7 @@ export function useVoice({
       recognitionRef.current = null;
     }
     setIsListening(false);
+    setInterimText("");
   }, []);
 
   const speakText = useCallback(
@@ -372,9 +393,11 @@ export function useVoice({
     speechError,
     recognitionSupported,
     synthesisSupported,
+    interimText,
     startListening,
     stopListening,
     speakText,
     stopSpeaking,
+    resetTranscript,
   };
 }
