@@ -421,7 +421,7 @@ export default function InterviewSession({
           <span className="question-counter-badge">Question {currentIndex + 1}</span>
           <div className="question-header-left">
             <span className="question-counter-badge">Question {currentIndex + 1}</span>
-            {voice.synthesisSupported && (
+            {(voice.synthesisSupported || voice.speechError) && (
               <button
                 type="button"
                 className={`voice-listen-btn ${voice.isSpeaking ? "is-speaking" : ""}`}
@@ -435,7 +435,7 @@ export default function InterviewSession({
                 title={voice.isSpeaking ? "Click to stop voice playback" : "Read question aloud"}
               >
                 <span aria-hidden="true">{voice.isSpeaking ? "⏹️" : "🔊"}</span>
-                <span>{voice.isSpeaking ? "Stop audio" : "Listen to question"}</span>
+                <span>{voice.isSpeaking ? "Stop audio" : "Replay question"}</span>
               </button>
             )}
           </div>

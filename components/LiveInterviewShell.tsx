@@ -335,7 +335,7 @@ export default function LiveInterviewShell({
                 You completed {history.length} question{history.length === 1 ? "" : "s"} in {formatTime(elapsedSeconds)}.
               </p>
               <div className="live-question-actions">
-                {voice.synthesisSupported && closingMessage && (
+                {(voice.synthesisSupported || voice.speechError) && closingMessage && (
                   <button
                     type="button"
                     className={`voice-listen-btn ${voice.isSpeaking ? "is-speaking" : ""}`}
@@ -346,6 +346,7 @@ export default function LiveInterviewShell({
                   </button>
                 )}
               </div>
+              {voice.speechError && <p className="voice-error-text" role="alert" style={{ marginTop: "12px" }}>{voice.speechError}</p>}
               <div className="match-gate-actions" style={{ marginTop: "20px" }}>
                 <button
                   type="button"
@@ -427,7 +428,7 @@ export default function LiveInterviewShell({
               <p className="eyebrow">QUESTION {questionNumber} / LIVE</p>
               <h3>{currentQuestion.question}</h3>
               <div className="live-question-actions">
-                {voice.synthesisSupported && (
+                {(voice.synthesisSupported || voice.speechError) && (
                   <button
                     type="button"
                     className={`voice-listen-btn ${voice.isSpeaking ? "is-speaking" : ""}`}
