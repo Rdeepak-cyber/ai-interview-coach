@@ -7,6 +7,7 @@ import type { InterviewQuestion } from "../lib/interview-question";
 import { formatWordCount, type InterviewQA } from "../lib/interview-session";
 import { useVoice } from "../lib/voice";
 import type { ResumeProfile } from "../lib/resume-profile";
+import VoiceDebugPanel from "./VoiceDebugPanel";
 
 type InterviewSessionProps = {
   questions: InterviewQuestion[];
@@ -45,6 +46,7 @@ export default function InterviewSession({
       }));
     },
     getCurrentText: () => answers[currentIndex] ?? "",
+    questionKey: currentIndex,
   });
 
   const currentQuestion = questions[currentIndex];
@@ -553,7 +555,7 @@ export default function InterviewSession({
           </div>
         </div>
       </div>
+      <VoiceDebugPanel info={voice.debugInfo} />
     </section>
   );
 }
-

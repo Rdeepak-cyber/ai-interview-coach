@@ -3,6 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 
+type VoiceDebugInfo = {
+  enabled: boolean;
+  isNativePlatform: boolean;
+  path: string;
+  languages: string[];
+  voices: string[];
+  lastError: string | null;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function isSpeechRecognitionSupported(): boolean {
   if (typeof window === "undefined") return false;
   return "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
@@ -20,41 +33,32 @@ export function isSpeechSynthesisSupported(): boolean {
 
 async function getNativeTTS() {
   if (typeof window === "undefined") return null;
-  try {
-    const { TextToSpeech } = await import("@capacitor-community/text-to-speech");
-    return TextToSpeech;
-  } catch {
-    return null;
-  }
+  const { TextToSpeech } = await import("@capacitor-community/text-to-speech");
+  return TextToSpeech;
 }
 
 export function findBestEnglishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   if (!voices || voices.length === 0) return null;
 
   const normalize = (lang: string) => lang.toLowerCase().replace(/_/g, "-");
-
-  // Priority 1: Indian English (en-IN)
-  const enInVoice = voices.find((v) => normalize(v.lang) === "en-in");
+  const enInVoice = voices.find((voice) => normalize(voice.lang) === "en-in");
   if (enInVoice) return enInVoice;
 
-  // Priority 2: US English (en-US), preferring natural/high-quality voices
   const enUsVoice =
     voices.find(
-      (v) =>
-        normalize(v.lang) === "en-us" &&
-        (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Samantha"))
-    ) || voices.find((v) => normalize(v.lang) === "en-us");
+      (voice) =>
+        normalize(voice.lang) === "en-us" &&
+        (voice.name.includes("Google") || voice.name.includes("Natural") || voice.name.includes("Samantha"))
+    ) || voices.find((voice) => normalize(voice.lang) === "en-us");
   if (enUsVoice) return enUsVoice;
 
-  // Priority 3: Any English voice (starts with "en")
-  const anyEnVoice =
+  return (
     voices.find(
-      (v) =>
-        normalize(v.lang).startsWith("en") &&
-        (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Samantha"))
-    ) || voices.find((v) => normalize(v.lang).startsWith("en"));
-
-  return anyEnVoice || null;
+      (voice) =>
+        normalize(voice.lang).startsWith("en") &&
+        (voice.name.includes("Google") || voice.name.includes("Natural") || voice.name.includes("Samantha"))
+    ) || voices.find((voice) => normalize(voice.lang).startsWith("en")) || null
+  );
 }
 
 const NO_ENGLISH_VOICE_ERROR =
@@ -63,9 +67,11 @@ const NO_ENGLISH_VOICE_ERROR =
 export function useVoice({
   onTranscript,
   getCurrentText,
+  questionKey,
 }: {
   onTranscript: (updatedText: string) => void;
   getCurrentText: () => string;
+  questionKey?: string | number | null;
 }) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -74,177 +80,287 @@ export function useVoice({
   const [synthesisSupported, setSynthesisSupported] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [interimText, setInterimText] = useState("");
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [debugIsNative, setDebugIsNative] = useState(false);
+  const [debugPath, setDebugPath] = useState("Not used");
+  const [debugLanguages, setDebugLanguages] = useState<string[]>([]);
+  const [debugVoices, setDebugVoices] = useState<string[]>([]);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const getCurrentTextRef = useRef(getCurrentText);
   getCurrentTextRef.current = getCurrentText;
-
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const shouldListenRef = useRef(false);
+  const recognitionStartingRef = useRef(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const committedTextRef = useRef("");
+  const lastCommittedChunkRef = useRef("");
   const speechRunRef = useRef(0);
+  const speechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startRecognitionRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     setRecognitionSupported(isSpeechRecognitionSupported());
     setSynthesisSupported(isSpeechSynthesisSupported());
 
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    const enabled = new URLSearchParams(window.location.search).get("debug") === "1";
+    setDebugEnabled(enabled);
+    if (enabled) {
+      try {
+        setDebugIsNative(Capacitor.isNativePlatform());
+      } catch (error) {
+        setLastError(getErrorMessage(error));
+      }
+
+      void getNativeTTS()
+        .then(async (tts) => {
+          if (!tts) return;
+          const [languageResult, voiceResult] = await Promise.allSettled([
+            tts.getSupportedLanguages(),
+            tts.getSupportedVoices(),
+          ]);
+          if (languageResult.status === "fulfilled") {
+            setDebugLanguages(languageResult.value.languages);
+          } else {
+            setLastError(getErrorMessage(languageResult.reason));
+          }
+          if (voiceResult.status === "fulfilled") {
+            setDebugVoices(
+              voiceResult.value.voices.map((voice) => `${voice.name} (${voice.lang})`)
+            );
+          } else {
+            setLastError(getErrorMessage(voiceResult.reason));
+          }
+        })
+        .catch((error: unknown) => setLastError(getErrorMessage(error)));
+    }
+
+    if ("speechSynthesis" in window) {
       const updateVoices = () => {
         const available = window.speechSynthesis.getVoices();
-        if (available && available.length > 0) {
-          setVoices(available);
-        }
+        if (available.length > 0) setVoices(available);
       };
       updateVoices();
       window.speechSynthesis.onvoiceschanged = updateVoices;
     }
 
     return () => {
-      // Clean up recognition on unmount
+      shouldListenRef.current = false;
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+      speechRunRef.current += 1;
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        recognitionRef.current.onend = null;
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // Recognition may already have stopped.
+        }
         recognitionRef.current = null;
       }
-      // Stop speech on unmount
-      if (typeof window !== "undefined") {
-        if ("speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-        }
-        try {
-          if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("TextToSpeech")) {
-            getNativeTTS().then((tts) => tts?.stop().catch(() => {}));
-          }
-        } catch {
-          // ignore cleanup errors
-        }
-      }
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      void getNativeTTS()
+        .then((tts) => tts?.stop())
+        .catch(() => {});
     };
   }, []);
+
+  useEffect(() => {
+    setInterimText("");
+    lastCommittedChunkRef.current = "";
+    committedTextRef.current = getCurrentTextRef.current();
+  }, [questionKey]);
 
   const resetTranscript = useCallback(() => {
     setInterimText("");
     setSpeechError(null);
+    lastCommittedChunkRef.current = "";
+    committedTextRef.current = getCurrentTextRef.current();
   }, []);
 
   const stopSpeaking = useCallback(() => {
     speechRunRef.current += 1;
+    if (speechTimerRef.current) {
+      clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
     setIsSpeaking(false);
-
     if (typeof window !== "undefined") {
-      try {
-        if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("TextToSpeech")) {
-          getNativeTTS().then((tts) => tts?.stop().catch(() => {}));
-        }
-      } catch {
-        // ignore
-      }
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
+      void getNativeTTS()
+        .then((tts) => tts?.stop())
+        .catch(() => {});
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     }
   }, []);
 
-  const startListening = useCallback(() => {
-    setSpeechError(null);
-    setInterimText("");
+  const startRecognitionSession = useCallback(() => {
+    if (
+      !shouldListenRef.current ||
+      recognitionRef.current ||
+      recognitionStartingRef.current
+    ) {
+      return;
+    }
 
+    const SpeechRecognitionConstructor =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionConstructor) {
+      shouldListenRef.current = false;
+      setIsListening(false);
+      setSpeechError("Speech recognition is unavailable.");
+      return;
+    }
+
+    let recognition: SpeechRecognition;
+    try {
+      recognition = new SpeechRecognitionConstructor();
+    } catch (error) {
+      shouldListenRef.current = false;
+      setIsListening(false);
+      setInterimText("");
+      setSpeechError(`Could not create speech recognition: ${getErrorMessage(error)}`);
+      return;
+    }
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognitionStartingRef.current = true;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+      recognitionStartingRef.current = false;
+      setIsListening(true);
+      setSpeechError(null);
+      setInterimText("");
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let currentInterim = "";
+      let currentText = getCurrentTextRef.current();
+      if (currentText !== committedTextRef.current) committedTextRef.current = currentText;
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result[0]?.transcript ?? "";
+        if (!result.isFinal) {
+          currentInterim += `${transcript} `;
+          continue;
+        }
+
+        const finalChunk = transcript.trim().replace(/\s+/g, " ");
+        if (
+          !finalChunk ||
+          finalChunk === lastCommittedChunkRef.current ||
+          currentText.trimEnd().endsWith(finalChunk)
+        ) {
+          continue;
+        }
+
+        const trimmedCurrent = currentText.trimEnd();
+        currentText = trimmedCurrent ? `${trimmedCurrent} ${finalChunk}` : finalChunk;
+        committedTextRef.current = currentText;
+        lastCommittedChunkRef.current = finalChunk;
+        onTranscriptRef.current(currentText);
+      }
+
+      setInterimText(currentInterim.trim().replace(/\s+/g, " "));
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (event.error === "no-speech" || event.error === "aborted") return;
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setSpeechError("Microphone access was denied. Please allow microphone access in your browser settings.");
+      } else if (event.error === "audio-capture") {
+        setSpeechError("No microphone found on your device.");
+      } else {
+        setSpeechError(`Speech recognition error: ${event.error}`);
+      }
+      shouldListenRef.current = false;
+      setIsListening(false);
+      setInterimText("");
+    };
+
+    recognition.onend = () => {
+      if (recognitionRef.current !== recognition) return;
+      recognitionRef.current = null;
+      recognitionStartingRef.current = false;
+      setInterimText("");
+
+      if (shouldListenRef.current) {
+        setIsListening(true);
+        restartTimerRef.current = setTimeout(() => {
+          restartTimerRef.current = null;
+          startRecognitionRef.current();
+        }, 250);
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (error) {
+      recognitionRef.current = null;
+      recognitionStartingRef.current = false;
+      const alreadyStarted =
+        typeof error === "object" &&
+        error !== null &&
+        "name" in error &&
+        error.name === "InvalidStateError";
+      if (alreadyStarted && shouldListenRef.current) {
+        restartTimerRef.current = setTimeout(() => {
+          restartTimerRef.current = null;
+          startRecognitionRef.current();
+        }, 250);
+        return;
+      }
+
+      shouldListenRef.current = false;
+      setIsListening(false);
+      setInterimText("");
+      setSpeechError("Could not start microphone recording. Please try again.");
+    }
+  }, []);
+  startRecognitionRef.current = startRecognitionSession;
+
+  const startListening = useCallback(() => {
     if (!isSpeechRecognitionSupported()) {
       setSpeechError("Speech-to-text is not supported in this browser. Chrome or Edge is recommended.");
       return;
     }
+    if (shouldListenRef.current) return;
 
-    // Stop speaking if question was being read aloud
+    shouldListenRef.current = true;
+    setSpeechError(null);
+    setInterimText("");
+    lastCommittedChunkRef.current = "";
+    committedTextRef.current = getCurrentTextRef.current();
+    setIsListening(true);
     stopSpeaking();
-
-    try {
-      const SpeechRecognitionConstructor =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-
-      if (!SpeechRecognitionConstructor) {
-        setSpeechError("Speech recognition is unavailable.");
-        return;
-      }
-
-      const recognition = new SpeechRecognitionConstructor();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setSpeechError(null);
-        setInterimText("");
-      };
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let finalChunk = "";
-        let currentInterim = "";
-
-        // 1. Rebuild the transcript from event.results starting at event.resultIndex
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          const text = result[0]?.transcript || "";
-          if (result.isFinal) {
-            finalChunk += text + " ";
-          } else {
-            currentInterim += text;
-          }
-        }
-
-        // 2. Add only results with isFinal === true to the stored answer text
-        const trimmedFinal = finalChunk.trim();
-        if (trimmedFinal) {
-          const currentText = getCurrentTextRef.current().trim();
-          const updated = currentText ? `${currentText} ${trimmedFinal}` : trimmedFinal;
-          onTranscriptRef.current(updated);
-        }
-
-        // 3. Show the current interim text separately and never save it into the answer
-        setInterimText(currentInterim.trim());
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (event.error === "no-speech") {
-          // Silent timeout or brief pause; user can keep speaking or click stop
-          return;
-        }
-
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setSpeechError("Microphone access was denied. Please allow microphone access in your browser settings.");
-        } else if (event.error === "audio-capture") {
-          setSpeechError("No microphone found on your device.");
-        } else if (event.error !== "aborted") {
-          setSpeechError(`Speech recognition error: ${event.error}`);
-        }
-
-        setIsListening(false);
-        setInterimText("");
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-        setInterimText("");
-        recognitionRef.current = null;
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error("Failed to start speech recognition", err);
-      setSpeechError("Could not start microphone recording. Please try again.");
-      setIsListening(false);
-      setInterimText("");
-    }
+    startRecognitionRef.current();
   }, [stopSpeaking]);
 
   const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
+    shouldListenRef.current = false;
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+    const recognition = recognitionRef.current;
+    if (recognition) {
       try {
-        recognitionRef.current.stop();
+        recognition.stop();
       } catch {
-        recognitionRef.current.abort();
+        try {
+          recognition.abort();
+        } catch {
+          // The recognition session may already have ended.
+        }
       }
-      recognitionRef.current = null;
     }
     setIsListening(false);
     setInterimText("");
@@ -254,134 +370,149 @@ export function useVoice({
     (text: string, options?: { onEnd?: () => void; onError?: () => void }) => {
       const speechRun = ++speechRunRef.current;
       setSpeechError(null);
-
-      // 1. If running natively in Capacitor, use native TextToSpeech plugin
-      const isNative =
-        typeof window !== "undefined" &&
-        Capacitor.isNativePlatform() &&
-        Capacitor.isPluginAvailable("TextToSpeech");
-
-      if (isNative) {
-        setIsSpeaking(true);
-        (async () => {
-          const NativeTTS = await getNativeTTS();
-          if (!NativeTTS) {
-            setIsSpeaking(false);
-            setSpeechError(NO_ENGLISH_VOICE_ERROR);
-            options?.onError?.();
-            return;
-          }
-
-          try {
-            await NativeTTS.stop();
-          } catch {
-            // ignore stop errors
-          }
-
-          // Try en-IN first, then fall back to en-US
-          try {
-            await NativeTTS.speak({
-              text,
-              lang: "en-IN",
-              rate: 0.95,
-              pitch: 1.0,
-              category: "playback",
-            });
-            if (speechRun === speechRunRef.current) {
-              setIsSpeaking(false);
-              options?.onEnd?.();
-            }
-          } catch (errIn) {
-            console.warn("Native TTS en-IN failed, falling back to en-US", errIn);
-            try {
-              await NativeTTS.speak({
-                text,
-                lang: "en-US",
-                rate: 0.95,
-                pitch: 1.0,
-                category: "playback",
-              });
-              if (speechRun === speechRunRef.current) {
-                setIsSpeaking(false);
-                options?.onEnd?.();
-              }
-            } catch (errUs) {
-              console.error("Native TTS en-US also failed", errUs);
-              if (speechRun === speechRunRef.current) {
-                setIsSpeaking(false);
-                setSpeechError(NO_ENGLISH_VOICE_ERROR);
-                options?.onError?.();
-              }
-            }
-          }
-        })();
-        return true;
+      setLastError(null);
+      if (speechTimerRef.current) {
+        clearTimeout(speechTimerRef.current);
+        speechTimerRef.current = null;
       }
 
-      // 2. Standard Web Speech Synthesis (browser or webview fallback)
-      if (!isSpeechSynthesisSupported()) {
-        setSpeechError("Text-to-speech is not supported in this browser. You can still read and type your answer.");
-        options?.onError?.();
-        return false;
-      }
-
-      window.speechSynthesis.cancel();
-
-      const currentVoices = window.speechSynthesis.getVoices();
-      const voiceList = currentVoices && currentVoices.length > 0 ? currentVoices : voices;
-      const englishVoice = findBestEnglishVoice(voiceList);
-
-      // If voices list is populated (> 0) and NO English voice was found on device:
-      if (voiceList.length > 0 && !englishVoice) {
-        setSpeechError(NO_ENGLISH_VOICE_ERROR);
-        options?.onError?.();
-        return false;
-      }
-
-      const playUtterance = (targetLang: "en-IN" | "en-US", isRetry = false) => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.0;
-
-        if (englishVoice) {
-          utterance.voice = englishVoice;
-          utterance.lang = englishVoice.lang || targetLang;
-        } else {
-          utterance.lang = targetLang;
+      const startWebSpeech = () => {
+        setDebugPath("Web Speech");
+        if (!isSpeechSynthesisSupported() || !("speechSynthesis" in window)) {
+          const message = "Text-to-speech is not supported in this browser. You can still read and type your answer.";
+          setSpeechError(message);
+          setIsSpeaking(false);
+          options?.onError?.();
+          return false;
         }
 
-        utterance.onstart = () => {
-          if (speechRun === speechRunRef.current) {
-            setIsSpeaking(true);
-            setSpeechError(null);
-          }
-        };
+        window.speechSynthesis.cancel();
+        const currentVoices = window.speechSynthesis.getVoices();
+        const voiceList = currentVoices.length > 0 ? currentVoices : voices;
+        const englishVoice = findBestEnglishVoice(voiceList);
+        if (voiceList.length > 0 && !englishVoice) {
+          setSpeechError(NO_ENGLISH_VOICE_ERROR);
+          setIsSpeaking(false);
+          options?.onError?.();
+          return false;
+        }
 
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        utterance.lang = englishVoice?.lang || "en-IN";
+        if (englishVoice) utterance.voice = englishVoice;
+
+        let finished = false;
+        const timeoutMs = Math.min(45000, Math.max(10000, text.length * 120));
+        speechTimerRef.current = setTimeout(() => {
+          if (finished || speechRun !== speechRunRef.current) return;
+          finished = true;
+          speechTimerRef.current = null;
+          window.speechSynthesis.cancel();
+          const message = `Web Speech playback timed out after ${timeoutMs} ms.`;
+          setLastError(message);
+          setSpeechError(message);
+          setIsSpeaking(false);
+          options?.onError?.();
+        }, timeoutMs);
+
+        utterance.onstart = () => {
+          if (speechRun === speechRunRef.current) setIsSpeaking(true);
+        };
         utterance.onend = () => {
-          if (speechRun !== speechRunRef.current) return;
+          if (finished || speechRun !== speechRunRef.current) return;
+          finished = true;
+          if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+          speechTimerRef.current = null;
           setIsSpeaking(false);
           options?.onEnd?.();
         };
-
         utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
-          if (speechRun !== speechRunRef.current) return;
-
-          // If en-IN failed without an explicit voice, retry once with en-US
-          if (!isRetry && !englishVoice && targetLang === "en-IN") {
-            console.warn("SpeechSynthesis en-IN failed, retrying with en-US");
-            playUtterance("en-US", true);
-            return;
-          }
-
+          if (finished || speechRun !== speechRunRef.current) return;
+          finished = true;
+          if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+          speechTimerRef.current = null;
+          setLastError(event.error);
+          setSpeechError(`Text-to-speech playback failed: ${event.error}. You can still read and type your answer.`);
           setIsSpeaking(false);
-          setSpeechError(NO_ENGLISH_VOICE_ERROR);
           options?.onError?.();
         };
 
-        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          finished = true;
+          if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+          speechTimerRef.current = null;
+          const message = getErrorMessage(error);
+          setLastError(message);
+          setSpeechError(`Text-to-speech playback failed: ${message}. You can still read and type your answer.`);
+          setIsSpeaking(false);
+          options?.onError?.();
+          return false;
+        }
+        return true;
       };
 
-      playUtterance("en-IN");
+      let isNative = false;
+      try {
+        isNative =
+          typeof window !== "undefined" &&
+          Capacitor.isNativePlatform() &&
+          Capacitor.isPluginAvailable("TextToSpeech");
+      } catch (error) {
+        setLastError(getErrorMessage(error));
+      }
+
+      if (!isNative) return startWebSpeech();
+
+      setDebugPath("Native plugin");
+      setIsSpeaking(true);
+      const timeoutMs = Math.min(45000, Math.max(10000, text.length * 120));
+      void (async () => {
+        let nativeTTS: Awaited<ReturnType<typeof getNativeTTS>> = null;
+        try {
+          nativeTTS = await getNativeTTS();
+          if (!nativeTTS) throw new Error("Native TextToSpeech plugin is unavailable.");
+          void nativeTTS.stop().catch(() => {});
+
+          let timeout: ReturnType<typeof setTimeout> | undefined;
+          try {
+            await Promise.race([
+              nativeTTS.speak({
+                text,
+                lang: "en-IN",
+                rate: 0.95,
+                pitch: 1,
+                volume: 1,
+              }),
+              new Promise<never>((_, reject) => {
+                timeout = setTimeout(
+                  () => reject(new Error(`Native TTS playback timed out after ${timeoutMs} ms.`)),
+                  timeoutMs
+                );
+              }),
+            ]);
+          } finally {
+            if (timeout) clearTimeout(timeout);
+          }
+
+          if (speechRun !== speechRunRef.current) return;
+          setIsSpeaking(false);
+          options?.onEnd?.();
+        } catch (error) {
+          if (speechRun !== speechRunRef.current) return;
+          const exactError = getErrorMessage(error);
+          setLastError(exactError);
+          setSpeechError(`Native text-to-speech failed: ${exactError}. Trying browser speech instead.`);
+          if (nativeTTS) void nativeTTS.stop().catch(() => {});
+          if (!startWebSpeech()) {
+            setIsSpeaking(false);
+          }
+        }
+      })();
       return true;
     },
     [voices]
@@ -399,5 +530,13 @@ export function useVoice({
     speakText,
     stopSpeaking,
     resetTranscript,
+    debugInfo: {
+      enabled: debugEnabled,
+      isNativePlatform: debugIsNative,
+      path: debugPath,
+      languages: debugLanguages,
+      voices: debugVoices,
+      lastError,
+    } satisfies VoiceDebugInfo,
   };
 }

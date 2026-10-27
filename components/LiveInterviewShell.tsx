@@ -9,6 +9,7 @@ import type { RoleMatch } from "../lib/role-match";
 import { ROLE_MATCH_THRESHOLDS } from "../lib/role-match";
 import { useVoice } from "../lib/voice";
 import FeedbackReportView from "./FeedbackReportView";
+import VoiceDebugPanel from "./VoiceDebugPanel";
 
 type LiveInterviewShellProps = {
   targetRole: string;
@@ -52,7 +53,11 @@ export default function LiveInterviewShell({
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
   const textareaId = useId();
-  const voice = useVoice({ onTranscript: setAnswer, getCurrentText: () => answer });
+  const voice = useVoice({
+    onTranscript: setAnswer,
+    getCurrentText: () => answer,
+    questionKey: history.length,
+  });
   const avatarState = voice.isSpeaking
     ? "speaking"
     : voice.isListening || isAnswerFocused
@@ -529,6 +534,7 @@ export default function LiveInterviewShell({
           </button>
         )}
       </div>
+      <VoiceDebugPanel info={voice.debugInfo} />
     </section>
   );
 }
