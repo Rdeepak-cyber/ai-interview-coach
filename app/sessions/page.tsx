@@ -46,7 +46,12 @@ export default function SessionsPage() {
               <span className="brand-subtitle">Personalized AI Practice</span>
             </div>
           </a>
-          <a className="text-action-btn sessions-back-link" href="/">Back to practice</a>
+          <a className="header-nav-button history-btn sessions-back-link" href="/">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+              <path d="m14 5-7 7 7 7M8 12h12" />
+            </svg>
+            <span>Back to practice</span>
+          </a>
         </div>
       </header>
 

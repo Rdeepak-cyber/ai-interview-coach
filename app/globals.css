@@ -201,6 +201,55 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .word-count { font-size: .82rem; color: var(--muted); }
 .text-action-btn { background: none; border: none; color: var(--muted); font-size: .82rem; font-weight: 600; cursor: pointer; padding: 4px 6px; text-decoration: underline; }
 .text-action-btn:hover { color: var(--deep); background: none; }
+.header-actions { align-items: center; display: flex; flex-direction: row; flex-wrap: wrap; gap: 16px; }
+.account-actions { align-items: center; display: flex; flex-direction: row; gap: 10px; }
+.header-nav-button {
+  align-items: center;
+  background: var(--paper);
+  border: 1px solid var(--deep);
+  border-radius: 7px;
+  color: var(--deep);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 9px 13px;
+  text-decoration: none;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.header-nav-button svg { flex: 0 0 18px; height: 18px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; width: 18px; }
+.header-nav-button.history-btn:hover { background: var(--soft-teal); }
+.header-nav-button.logout-btn { background: var(--paper); border-color: var(--accent); color: var(--accent); }
+.header-nav-button.logout-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 10%, var(--paper)); }
+.header-nav-button:focus-visible { outline: 3px solid var(--deep); outline-offset: 3px; }
+.header-nav-button.logout-btn:focus-visible { outline-color: var(--accent); }
+.header-nav-button:disabled { cursor: not-allowed; opacity: .65; }
+.sessions-back-link:hover { background: var(--soft-teal); color: var(--deep); }
+@media (max-width: 600px) {
+  .header-top-bar { align-items: center; flex-direction: row; gap: 10px; }
+  .header-actions { align-items: center; flex: 0 0 auto; gap: 8px; justify-content: flex-end; }
+  .account-actions { gap: 8px; }
+  .header-actions .header-nav-button { width: auto; }
+}
+@media (max-width: 480px) {
+  .header-top-bar { gap: 8px; }
+  .brand-lockup { flex: 1 1 auto; gap: 8px; min-width: 0; }
+  .brand-title { font-size: .8rem; }
+  .brand-subtitle { font-size: .66rem; }
+  .brand-logo { flex: 0 0 30px; }
+  .header-actions { gap: 6px; }
+  .account-actions { gap: 6px; }
+  .header-actions .reset-btn { flex: 1 1 100%; justify-content: flex-end; order: 1; text-align: right; }
+  .header-actions .account-actions { order: 0; }
+  .header-nav-button { gap: 0; height: 44px; padding: 0; width: 44px; }
+  .header-nav-button span { clip: rect(0, 0, 0, 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+  .sessions-back-link { gap: 8px; padding: 9px 12px; width: auto; }
+  .sessions-back-link span { clip: auto; clip-path: none; height: auto; overflow: visible; position: static; white-space: normal; width: auto; }
+}
 .session-navigation-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 22px; margin-top: 14px; }
 .nav-right-actions { display: flex; gap: 10px; }
 .session-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 24px 0 32px; }
@@ -386,5 +435,3 @@ pre { background: #f6f7f3; border-left: 3px solid #9bbeb1; color: #31444a; font-
 .end-interview-btn:hover:not(:disabled) { background: #fae4df !important; border-color: var(--accent) !important; color: #7f1d10 !important; }
 .live-wrapup-box h3 { color: white; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.25rem, 2.4vw, 1.75rem); font-weight: 400; line-height: 1.35; margin: 0 0 16px; }
 @media (max-width: 600px) { .mode-options, .live-stage, .live-input-mode-picker { grid-template-columns: 1fr; } .mode-option { min-height: 260px; } .live-session-header { flex-direction: column; } .live-header-right { align-self: flex-start; } .live-timer { align-self: flex-start; } .live-preview-footer { align-items: stretch; flex-direction: column-reverse; } }
-
-

@@ -35,7 +35,6 @@ export default function HeaderStepper({
   onReset,
   onPastSessions,
 }: HeaderStepperProps) {
-  const currentConfig = STEPS.find((s) => s.id === currentStep) ?? STEPS[0];
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -65,12 +64,6 @@ export default function HeaderStepper({
         </div>
 
         <div className="header-actions">
-          <div className="current-step-pill">
-            <span className="step-indicator-dot" />
-            <span>
-              Step {currentStep} of {STEPS.length}: <strong>{currentConfig.label}</strong>
-            </span>
-          </div>
           {onReset && currentStep > 1 && (
             <button
               type="button"
@@ -82,14 +75,32 @@ export default function HeaderStepper({
             </button>
           )}
           {isAuthenticated && (
-            <button type="button" className="text-action-btn history-btn" onClick={onPastSessions ?? (() => window.location.assign("/sessions"))}>
-              Past sessions
-            </button>
-          )}
-          {isAuthenticated && (
-            <button type="button" className="text-action-btn logout-btn" onClick={handleSignOut} disabled={isSigningOut}>
-              {isSigningOut ? "Signing out..." : "Log out"}
-            </button>
+            <div className="account-actions">
+              <button
+                type="button"
+                className="header-nav-button history-btn"
+                aria-label="Past sessions"
+                onClick={onPastSessions ?? (() => window.location.assign("/sessions"))}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2M4.5 7.5 3 6m0 0v3m0-3h3" />
+                </svg>
+                <span>Past sessions</span>
+              </button>
+              <button
+                type="button"
+                className="header-nav-button logout-btn"
+                aria-label="Log out"
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                  <path d="M10 5H5v14h5m5-3 4-4-4-4m4 4H9" />
+                </svg>
+                <span>{isSigningOut ? "Signing out..." : "Log out"}</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
