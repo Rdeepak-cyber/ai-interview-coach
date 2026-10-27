@@ -31,10 +31,16 @@ export function isSpeechSynthesisSupported(): boolean {
   }
 }
 
-async function getNativeTTS() {
+type NativeTTSPlugin = typeof import("@capacitor-community/text-to-speech").TextToSpeech;
+
+async function getNativeTTS(): Promise<{ tts: NativeTTSPlugin } | null> {
   if (typeof window === "undefined") return null;
-  const { TextToSpeech } = await import("@capacitor-community/text-to-speech");
-  return TextToSpeech;
+  try {
+    const pluginModule = await import("@capacitor-community/text-to-speech");
+    return { tts: pluginModule.TextToSpeech };
+  } catch (error) {
+    throw error;
+  }
 }
 
 export function findBestEnglishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
@@ -115,27 +121,31 @@ export function useVoice({
         setLastError(getErrorMessage(error));
       }
 
-      void getNativeTTS()
-        .then(async (tts) => {
-          if (!tts) return;
-          const [languageResult, voiceResult] = await Promise.allSettled([
-            tts.getSupportedLanguages(),
-            tts.getSupportedVoices(),
-          ]);
-          if (languageResult.status === "fulfilled") {
-            setDebugLanguages(languageResult.value.languages);
-          } else {
-            setLastError(getErrorMessage(languageResult.reason));
+      void (async () => {
+        try {
+          const nativePlugin = await getNativeTTS();
+          if (!nativePlugin) return;
+
+          try {
+            const result = await nativePlugin.tts.getSupportedLanguages();
+            setDebugLanguages(result.languages);
+          } catch (error) {
+            setLastError(getErrorMessage(error));
+            setSpeechError(`Native TTS language lookup failed: ${getErrorMessage(error)}`);
           }
-          if (voiceResult.status === "fulfilled") {
-            setDebugVoices(
-              voiceResult.value.voices.map((voice) => `${voice.name} (${voice.lang})`)
-            );
-          } else {
-            setLastError(getErrorMessage(voiceResult.reason));
+
+          try {
+            const result = await nativePlugin.tts.getSupportedVoices();
+            setDebugVoices(result.voices.map((voice) => `${voice.name} (${voice.lang})`));
+          } catch (error) {
+            setLastError(getErrorMessage(error));
+            setSpeechError(`Native TTS voice lookup failed: ${getErrorMessage(error)}`);
           }
-        })
-        .catch((error: unknown) => setLastError(getErrorMessage(error)));
+        } catch (error) {
+          setLastError(getErrorMessage(error));
+          setSpeechError(`Native TTS plugin loading failed: ${getErrorMessage(error)}`);
+        }
+      })();
     }
 
     if ("speechSynthesis" in window) {
@@ -162,9 +172,14 @@ export function useVoice({
         recognitionRef.current = null;
       }
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-      void getNativeTTS()
-        .then((tts) => tts?.stop())
-        .catch(() => {});
+      void (async () => {
+        try {
+          const nativePlugin = await getNativeTTS();
+          if (nativePlugin) await nativePlugin.tts.stop();
+        } catch {
+          // The component is unmounting, so no UI state can be updated.
+        }
+      })();
     };
   }, []);
 
@@ -189,9 +204,17 @@ export function useVoice({
     }
     setIsSpeaking(false);
     if (typeof window !== "undefined") {
-      void getNativeTTS()
-        .then((tts) => tts?.stop())
-        .catch(() => {});
+      void (async () => {
+        try {
+          const nativePlugin = await getNativeTTS();
+          if (nativePlugin) await nativePlugin.tts.stop();
+        } catch (error) {
+          const message = getErrorMessage(error);
+          setLastError(message);
+          setSpeechError(`Native TTS stop failed: ${message}`);
+          if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        }
+      })();
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     }
   }, []);
@@ -472,45 +495,58 @@ export function useVoice({
       setIsSpeaking(true);
       const timeoutMs = Math.min(45000, Math.max(10000, text.length * 120));
       void (async () => {
-        let nativeTTS: Awaited<ReturnType<typeof getNativeTTS>> = null;
+        const nativePluginRef: { current: { tts: NativeTTSPlugin } | null } = { current: null };
+        let nativeAttemptActive = true;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         try {
-          nativeTTS = await getNativeTTS();
-          if (!nativeTTS) throw new Error("Native TextToSpeech plugin is unavailable.");
-          void nativeTTS.stop().catch(() => {});
-
-          let timeout: ReturnType<typeof setTimeout> | undefined;
-          try {
-            await Promise.race([
-              nativeTTS.speak({
+          await Promise.race([
+            (async () => {
+              const nativePlugin = await getNativeTTS();
+              nativePluginRef.current = nativePlugin;
+              if (!nativePlugin) throw new Error("Native TextToSpeech plugin is unavailable.");
+              if (!nativeAttemptActive || speechRun !== speechRunRef.current) return;
+              await nativePlugin.tts.stop();
+              if (!nativeAttemptActive || speechRun !== speechRunRef.current) return;
+              await nativePlugin.tts.speak({
                 text,
                 lang: "en-IN",
                 rate: 0.95,
                 pitch: 1,
                 volume: 1,
-              }),
-              new Promise<never>((_, reject) => {
-                timeout = setTimeout(
-                  () => reject(new Error(`Native TTS playback timed out after ${timeoutMs} ms.`)),
-                  timeoutMs
-                );
-              }),
-            ]);
-          } finally {
-            if (timeout) clearTimeout(timeout);
-          }
+              });
+            })(),
+            new Promise<never>((_, reject) => {
+              timeout = setTimeout(
+                () => reject(new Error(`Native TTS playback timed out after ${timeoutMs} ms.`)),
+                timeoutMs
+              );
+            }),
+          ]);
 
           if (speechRun !== speechRunRef.current) return;
           setIsSpeaking(false);
           options?.onEnd?.();
         } catch (error) {
+          nativeAttemptActive = false;
           if (speechRun !== speechRunRef.current) return;
           const exactError = getErrorMessage(error);
           setLastError(exactError);
           setSpeechError(`Native text-to-speech failed: ${exactError}. Trying browser speech instead.`);
-          if (nativeTTS) void nativeTTS.stop().catch(() => {});
+          const nativePlugin = nativePluginRef.current;
+          if (nativePlugin) {
+            try {
+              void nativePlugin.tts.stop().catch((stopError: unknown) => {
+                setLastError(getErrorMessage(stopError));
+              });
+            } catch (stopError) {
+              setLastError(getErrorMessage(stopError));
+            }
+          }
           if (!startWebSpeech()) {
             setIsSpeaking(false);
           }
+        } finally {
+          if (timeout) clearTimeout(timeout);
         }
       })();
       return true;
